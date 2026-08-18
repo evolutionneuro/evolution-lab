@@ -1141,6 +1141,19 @@
       }
     }
 
+    // Reset Function Implementation
+    function resetEntireTracker() {
+      if (confirm("Are you sure you want to completely wipe all progression data and start over?")) {
+        localStorage.removeItem(STORAGE_KEY);
+        appState = getDefaultState();
+        saveState();
+        initFolders();
+        renderHabitManager();
+        updateHeaderPlayerProfile();
+        alert("System successfully reset to default state.");
+      }
+    }
+
     function exportJSONBackup() {
       saveState();
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
