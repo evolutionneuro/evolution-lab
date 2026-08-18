@@ -61,16 +61,16 @@
       const authStatusSpan = document.getElementById('auth-status-text');
       const loginBtn = document.getElementById('login-btn');
       const logoutBtn = document.getElementById('logout-btn');
-      const cloudSyncBtn = document.getElementById('cloud-sync-btn');
       const leaderboardBtn = document.getElementById('leaderboard-btn');
+      const autoSyncStatus = document.getElementById('autosync-status-text');
 
       if (user) {
         window.currentFirebaseUser = user;
         if (authStatusSpan) authStatusSpan.innerText = `LOGGED IN: ${user.displayName || user.email}`;
         if (loginBtn) loginBtn.style.display = 'none';
         if (logoutBtn) logoutBtn.style.display = 'inline-block';
-        if (cloudSyncBtn) cloudSyncBtn.style.display = 'inline-block';
         if (leaderboardBtn) leaderboardBtn.style.display = 'inline-block';
+        if (autoSyncStatus) autoSyncStatus.style.display = 'inline-block';
         
         await loadUserDataFromCloud();
       } else {
@@ -78,7 +78,7 @@
         if (authStatusSpan) authStatusSpan.innerText = 'STATUS: GUEST (LOCAL ONLY)';
         if (loginBtn) loginBtn.style.display = 'inline-block';
         if (logoutBtn) logoutBtn.style.display = 'none';
-        if (cloudSyncBtn) cloudSyncBtn.style.display = 'none';
+        if (autoSyncStatus) autoSyncStatus.style.display = 'none';
       }
       updateHeaderPlayerProfile();
     });
@@ -291,6 +291,62 @@
       background: #111;
       color: #a3e635;
     }
+    
+    .emoji-picker-container {
+      display: none;
+      flex-direction: column;
+      background: #0f0f0f;
+      border: 2px solid #fff;
+      padding: 10px;
+      margin-top: 8px;
+      box-shadow: 6px 6px 0px #222;
+    }
+    .emoji-categories-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .emoji-category-tab {
+      background: #1a1a1a;
+      color: #ccc;
+      border: 1px solid #555;
+      font-size: 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .emoji-category-tab.active {
+      background: #a3e635;
+      color: #000;
+      border-color: #fff;
+      font-weight: bold;
+    }
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 4px;
+      max-height: 220px;
+      overflow-y: auto;
+      background: #000;
+      border: 1px solid #555;
+      padding: 6px;
+    }
+    .emoji-cell {
+      font-size: 22px;
+      text-align: center;
+      cursor: pointer;
+      padding: 4px;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+    .emoji-cell:hover {
+      background: #222;
+      border-color: #a3e635;
+    }
+    .emoji-cell.selected {
+      background: #113;
+      border-color: #60a5fa;
+    }
   </style>
 </head>
 <body>
@@ -328,9 +384,9 @@
   </div>
 
   <!-- PERSONAL SETTINGS & CABINET MODAL -->
-  <div id="settings-modal" class="retro-modal" style="width: 600px; height: 500px; margin: auto; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+  <div id="settings-modal" class="retro-modal" style="width: 620px; height: 580px; margin: auto; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">
     <h3>PERSONAL SETTINGS & EVOLUTION CABINET</h3>
-    <div style="flex: 1; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 14px; font-size: 12px;">
+    <div style="flex: 1; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 14px; font-size: 12px; padding-right: 4px;">
       
       <div>
         <label style="display:block; margin-bottom:4px; color:#a3e635;"><b>Researcher Nickname:</b></label>
@@ -339,14 +395,20 @@
 
       <div>
         <label style="display:block; margin-bottom:4px; color:#a3e635;"><b>Choose Avatar Symbol:</b></label>
-        <select id="settings-avatar-select" style="width: 100%; box-sizing: border-box;">
-          <option value="🧬">🧬 DNA Helix</option>
-          <option value="🧫">🧫 Petri Dish</option>
-          <option value="🔬">🔬 Microscope</option>
-          <option value="🧪">🧪 Test Tube</option>
-          <option value="🦠">🦠 Microbe</option>
-          <option value="⚡">⚡ Energy Core</option>
-        </select>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <input type="hidden" id="settings-avatar-input" value="🧬">
+          <div id="settings-avatar-preview" style="font-size: 28px; background: #000; border: 1px solid #fff; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">🧬</div>
+          <button type="button" onclick="playSound('sound1'); toggleEmojiPickerDropdown()" style="padding: 6px 12px; background: #111; color: #a3e635; border: 1px solid #a3e635;">[ SELECT FROM FULL EMOJI LIBRARY ]</button>
+        </div>
+
+        <div id="emoji-picker-dropdown" class="emoji-picker-container">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 11px; color: #a3e635;"><b>Full Unicode Emoji Library (Select One)</b></span>
+            <button type="button" onclick="toggleEmojiPickerDropdown()" style="margin:0; padding:1px 6px; font-size:10px;">X CLOSE</button>
+          </div>
+          <div id="emoji-categories-tabs" class="emoji-categories-tabs"></div>
+          <div id="emoji-grid" class="emoji-grid"></div>
+        </div>
       </div>
 
       <div style="border-top: 1px dashed #444; padding-top: 10px;">
@@ -385,9 +447,9 @@
       </div>
       <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
         <span id="auth-status-text" style="font-size:10px; color:#fbbf24; margin-right:4px;">STATUS: GUEST</span>
+        <span id="autosync-status-text" style="font-size:10px; color:#34d399; margin-right:4px; display:none;">[ AUTO-SYNCING 5S ]</span>
         <button id="login-btn" onclick="loginWithGoogle()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#fbbf24; border:1px solid #fbbf24;">[ GOOGLE LOGIN ]</button>
         <button id="logout-btn" onclick="logoutFirebase()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#f87171; border:1px solid #f87171; display:none;">[ LOGOUT ]</button>
-        <button id="cloud-sync-btn" onclick="saveUserDataToCloud()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#34d399; border:1px solid #34d399; display:none;" title="Publish stats to leaderboard & save to Cloud">[ SYNC TO CLOUD ]</button>
         <button id="leaderboard-btn" onclick="openLeaderboard()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#a3e635; border:1px solid #a3e635; display:none;">[ LEADERBOARD ]</button>
 
         <button onclick="openSettingsModal()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#60a5fa; border:1px solid #60a5fa;">[ CABINET ]</button>
@@ -494,6 +556,79 @@
   <script>
     window.currentFirebaseUser = null;
 
+    const EMOJI_CATEGORIES = {
+      "🧬 Science & Lab": ["🧬", "🧫", "🔬", "🧪", "🦠", "⚡", "🩻", "💡", "🔮", "🧠", "🔭", "📡", "⚙️", "🔧", "🧲", "💻", "🖥️", "💾", "💿", "🪙"],
+      "😀 Faces & Emotion": ["😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "😌", "😔", "😷", "🤒", "🤕", "🤢", "🤮", "🤧", "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "😎", "🤓", "🧐", "😕", "😟", "🙁", "😮", "😯", "😲", "😳", "🥺", "😡", "🤬", "😈", "👿", "💀", "☠️", "💩", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖"],
+      "❤️ Symbols & Hearts": ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❤️‍🔥", "❤️‍🩹", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "🔥", "⭐", "🌟", "💫", "✨", "☄️", "💥", "💯", "💢", "💬", "👁️‍🗨️", "🗨️", "💭", "💤", "🏁", "🚩", "🎌", "🏴", "🏳️", "🏳️‍🌈", "🏳️‍⚧️", "🏴‍☠️"],
+      "🐱 Animals & Nature": ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤", "🐣", "🐥", "🦆", "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🪱", "🐛", "🦋", "🐌", "🐞", "🐜", "🪰", "🪲", "🦟", "🦗", "🕷️", "🕸️", "🦂", "🐢", "🐍", "🦎", "🦖", "🦕", "🐙", "🦑", "🦐", "🦞", "🦀", "🐡", "🐠", "🐟", "🐬", "🐳", "🐋", "🦈", "🐅", "🐆", "🦓", "🦍", "🦧", "🐘", "🦛", "🦏", "🐪", "🐫", "🦒", "🦘", "🐃", "🐂", "🐄", "🐎", "🐖", "🐑", "🦙", "🐐", "🦌", "🐕", "🐩", "🦮", "🐕‍🦺", "🐈", "🐈‍⬛", "🪶", "🐓", "🦃", "🦤", "🦚", "🦜", "🦢", "🦩", "🕊️", "🐇", "🦝", "🦡", "🦫", "🦦", "🦥", "🐁", "🐀", "🐿️", "🦔"],
+      "🍎 Food & Plants": ["🍎", "🍏", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🍈", "🍒", "🍑", "🍍", "🥥", "🥝", "🍅", "🍆", "🥑", "🥦", "🥬", "🥒", "🌶️", "🫑", "🌽", "🥕", "🫒", "🧄", "🧅", "🥔", "🍠", "🥐", "🥯", "🍞", "🥖", "🥨", "🧀", "🥚", "🍳", "🧈", "🥞", "🧇", "🥓", "🥩", "🍗", "🍖", "🦴", "🌭", "🍔", "🍟", "🍕", "🥪", "🥙", "🧆", "🌮", "🌯", "🥗", "🥘", "🥫", "🍝", "🍜", "🍲", "🍛", "🍱", "🍤", "🍙", "🍚", "🍘", "🍥", "🥠", "🥮", "🍢", "🍡", "🍧", "🍨", "🍦", "🥧", "🧁", "🍰", "🎂", "🍮", "🍭", "🍬", "🍫", "🍿", "🍩", "🍪", "🌰", "🥜", "🍯", "🥛", "🍼", "☕", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🍸", "🍹", "🍾", "🥃", "🥄", "🍴", "🍽️", "🥣", "🥡", "🥢", "🧂"],
+      "🚀 Travel & Activity": ["🚀", "🛸", "🛰️", "⛵", "🚢", "🚗", "🚕", "🚙", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒", "🚐", "🛻", "🚚", "🚛", "🚜", "🛵", "🏍️", "🛺", "🚲", "🛴", "🛹", "🛼", "🚏", "🛤️", "⛽", "🚨", "🚥", "🚦", "🚧", "⚓", "🚤", "🛳️", "⛴️", "🛥️", "✈️", "🛩️", "🛫", "🛬", "🪂", "💺", "🚁", "🚟", "🚡", "🧳", "⌛", "⏳", "🗺️", "🧭", "🏔️", "🌋", "🏕️", "🏖️", "🏜️", "🏝️", "🏟️", "🏛️", "🏗️", "🧱", "🏠", "🏡", "🏢", "🏣", "🏥", "🏦", "🏨", "🏪", "🏫", "🏬", "🏭", "🏰", "🗼", "🗽"],
+      "💡 Objects & Symbols": ["💡", "🔦", "🕯️", "🪔", "📔", "📕", "📖", "📗", "📘", "📙", "📚", "📓", "📰", "🔖", "🏷️", "💰", "🪙", "💴", "💵", "💶", "💷", "💳", "🧾", "📊", "✉️", "📧", "📦", "📫", "📪", "✏️", "✒️", "🖊️", "🖌️", "🖍️", "📝", "💼", "📁", "📂", "📅", "📈", "📉", "📌", "📍", "📎", "📏", "📐", "✂️", "🔒", "🔓", "🔏", "🔐", "🔑", "🔨", "🪓", "⛏️", "⚒️", "🛠️", "⚔️", "🛡️", "🔧", "🔩", "⚙️", "🗜️", "⚖️", "🔗", "⛓️", "🧰", "🧲", "🪜"]
+    };
+
+    let currentEmojiCategory = Object.keys(EMOJI_CATEGORIES)[0];
+
+    function toggleEmojiPickerDropdown() {
+      let dropdown = document.getElementById('emoji-picker-dropdown');
+      if (!dropdown) return;
+      let isVisible = dropdown.style.display === 'flex';
+      dropdown.style.display = isVisible ? 'none' : 'flex';
+      if (!isVisible) {
+        buildEmojiPickerTabs();
+        buildEmojiPickerGrid(currentEmojiCategory);
+      }
+    }
+
+    function buildEmojiPickerTabs() {
+      let tabsContainer = document.getElementById('emoji-categories-tabs');
+      if (!tabsContainer) return;
+      tabsContainer.innerHTML = '';
+
+      Object.keys(EMOJI_CATEGORIES).forEach(categoryName => {
+        let tab = document.createElement('button');
+        tab.type = 'button';
+        tab.className = 'emoji-category-tab' + (categoryName === currentEmojiCategory ? ' active' : '');
+        tab.innerText = categoryName;
+        tab.onclick = () => {
+          playSound('sound1');
+          currentEmojiCategory = categoryName;
+          document.querySelectorAll('.emoji-category-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          buildEmojiPickerGrid(categoryName);
+        };
+        tabsContainer.appendChild(tab);
+      });
+    }
+
+    function buildEmojiPickerGrid(categoryName) {
+      let grid = document.getElementById('emoji-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      
+      let currentSelected = document.getElementById('settings-avatar-input').value || '🧬';
+      let emojis = EMOJI_CATEGORIES[categoryName] || [];
+
+      emojis.forEach(emoji => {
+        let cell = document.createElement('div');
+        cell.className = 'emoji-cell' + (emoji === currentSelected ? ' selected' : '');
+        cell.innerText = emoji;
+        cell.title = emoji;
+        cell.onclick = () => {
+          playSound('sound1');
+          document.querySelectorAll('.emoji-cell').forEach(c => c.classList.remove('selected'));
+          cell.classList.add('selected');
+          
+          document.getElementById('settings-avatar-input').value = emoji;
+          let preview = document.getElementById('settings-avatar-preview');
+          if (preview) preview.innerText = emoji;
+
+          let dropdown = document.getElementById('emoji-picker-dropdown');
+          if (dropdown) dropdown.style.display = 'none';
+        };
+        grid.appendChild(cell);
+      });
+    }
+
     async function loginWithGoogle() {
       try {
         await window.FB_signInWithPopup(window.FB_AUTH, window.FB_GoogleProvider);
@@ -512,11 +647,8 @@
       }
     }
 
-    async function saveUserDataToCloud() {
-      if (!window.currentFirebaseUser) {
-        alert("Please log in with Google first to sync your lab to the cloud.");
-        return;
-      }
+    async function performAutomaticCloudSync() {
+      if (!window.currentFirebaseUser) return;
       try {
         saveState();
         let userId = window.currentFirebaseUser.uid;
@@ -530,7 +662,7 @@
           showBiome: appState.settings.showBiome,
           appState: appState,
           lastUpdated: window.FB_serverTimestamp()
-        });
+        }, { merge: true });
 
         let totalPopAcrossAllMonths = 0;
         let totalIslandsAcrossAllMonths = 0;
@@ -541,7 +673,6 @@
           }
         }
 
-        // Prepare month 1 snapshot data for leaderboard if permitted
         let m1Snapshot = null;
         let habitsSnapshot = null;
 
@@ -577,14 +708,17 @@
           habits: habitsSnapshot,
           m1Snapshot: m1Snapshot,
           updatedAt: window.FB_serverTimestamp()
-        });
-
-        alert("Lab state successfully synchronized to Cloud & Leaderboard updated!");
+        }, { merge: true });
       } catch (err) {
-        console.error("Cloud sync failed:", err);
-        alert("Failed to sync with cloud database.");
+        console.error("Auto-sync background error:", err);
       }
     }
+
+    setInterval(() => {
+      if (window.currentFirebaseUser) {
+        performAutomaticCloudSync();
+      }
+    }, 5000);
 
     async function loadUserDataFromCloud() {
       if (!window.currentFirebaseUser) return;
@@ -604,7 +738,6 @@
             initFolders();
             renderHabitManager();
             updateHeaderPlayerProfile();
-            console.log("Lab state successfully loaded from Cloud!");
           }
         }
       } catch (err) {
@@ -638,11 +771,6 @@
           let biomeAndStatsHtml = `<span style="color:#777; font-size:11px;">Private / Opted Out</span>`;
 
           if (data.showBiome || data.shareHabits) {
-            let parts = [];
-            if (data.showBiome && data.m1Snapshot) {
-              parts.append = `<canvas id="${rowId}" width="70" height="30" style="border:1px solid #555; background:#000; vertical-align:middle; display:inline-block;"></canvas>`;
-            }
-            
             let habitsHtml = '';
             if (data.shareHabits && data.habits && data.habits.length > 0) {
               habitsHtml = `<div style="display:flex; flex-direction:column; gap:3px; margin-top:4px;">`;
@@ -692,7 +820,6 @@
 
         tbody.innerHTML = html;
 
-        // Render mini canvases in leaderboard after DOM insertion
         setTimeout(() => {
           renderQueue.forEach(item => {
             let cvs = document.getElementById(item.canvasId);
@@ -748,9 +875,16 @@
       if (modal) {
         if (show) {
           document.getElementById('settings-nickname-input').value = appState.settings.nickname || 'Researcher';
-          document.getElementById('settings-avatar-select').value = appState.settings.avatar || '🧬';
+          let currentAvatar = appState.settings.avatar || '🧬';
+          document.getElementById('settings-avatar-input').value = currentAvatar;
+          let preview = document.getElementById('settings-avatar-preview');
+          if (preview) preview.innerText = currentAvatar;
+
           document.getElementById('settings-share-habits').checked = !!appState.settings.shareHabits;
           document.getElementById('settings-show-biome').checked = appState.settings.showBiome !== false;
+          
+          let dropdown = document.getElementById('emoji-picker-dropdown');
+          if (dropdown) dropdown.style.display = 'none';
         }
         modal.style.display = show ? 'flex' : 'none';
       }
@@ -764,12 +898,12 @@
     window.savePersonalSettings = function() {
       playSound('sound2');
       let nickInput = document.getElementById('settings-nickname-input').value.trim();
-      let avatarSelect = document.getElementById('settings-avatar-select').value;
+      let avatarInput = document.getElementById('settings-avatar-input').value || '🧬';
       let shareCheck = document.getElementById('settings-share-habits').checked;
       let biomeCheck = document.getElementById('settings-show-biome').checked;
 
       appState.settings.nickname = nickInput || 'Researcher';
-      appState.settings.avatar = avatarSelect;
+      appState.settings.avatar = avatarInput;
       appState.settings.shareHabits = shareCheck;
       appState.settings.showBiome = biomeCheck;
 
@@ -953,7 +1087,7 @@
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
       } catch (e) {
-        console.error("LocalStorage save failed (Quota Exceeded):", e);
+        console.error("LocalStorage save failed:", e);
       }
     }
 
@@ -1956,342 +2090,131 @@
 
       if (history.length === 0) {
         heatContainer.innerHTML = '<div style="color:#888; font-size:12px; padding:10px;">No spawn history recorded yet.</div>';
-        reportBox.innerHTML = '<div style="font-size:14px; color:#aaa; width:100%;"><i>No data recorded for current month cycle.</i></div>';
         return;
       }
 
-      let totalScoreAcrossAll = 0;
+      let table = document.createElement('table');
+      table.style.cssText = 'width:100%; border-collapse:collapse; font-size:11px;';
+      
+      let thead = document.createElement('tr');
+      thead.innerHTML = '<th style="border:1px solid #444; padding:6px; background:#111; color:#a3e635;">Trait / Day</th>' + history.map(h => `<th style="border:1px solid #444; padding:6px; background:#111; text-align:center;">${h.timestamp}</th>`).join('');
+      table.appendChild(thead);
+
+      let habitMap = {};
+      monthData.habits.forEach(h => { habitMap[h.name] = { color: h.color, type: h.type, values: [] }; });
+
       history.forEach(entry => {
-        entry.habits.forEach(h => { 
-          totalScoreAcrossAll += (h.type === 'yn' ? (h.units > 0 ? 1 : 0) : Math.min(h.units, 8)); 
+        let activeNames = entry.habits.map(eh => eh.name);
+        entry.habits.forEach(eh => {
+          if (!habitMap[eh.name]) {
+            habitMap[eh.name] = { color: eh.color, type: eh.type, values: [] };
+          }
+          habitMap[eh.name].values.push(eh.units);
+        });
+        Object.keys(habitMap).forEach(k => {
+          if (!activeNames.includes(k)) {
+            habitMap[k].values.push(0);
+          }
         });
       });
 
-      let pieSlices = [];
-      let cumulativeAngle = 0;
+      Object.keys(habitMap).forEach(traitName => {
+        let info = habitMap[traitName];
+        let tr = document.createElement('tr');
+        let tdTitle = document.createElement('td');
+        tdTitle.style.cssText = `border:1px solid #444; padding:6px; font-weight:bold; color:${info.color};`;
+        tdTitle.innerText = traitName;
+        tr.appendChild(tdTitle);
 
-      monthData.habits.forEach((habit) => {
-        let rowWrapper = document.createElement('div');
-        rowWrapper.style.marginBottom = '8px';
-        
-        rowWrapper.innerHTML = `<div style="font-size:11px; color:${habit.color || '#fff'}; margin-bottom:3px;">${habit.name}</div>`;
+        info.values.forEach(val => {
+          let td = document.createElement('td');
+          td.style.cssText = 'border:1px solid #444; padding:4px; text-align:center; cursor:pointer;';
+          
+          let intensity = info.type === 'yn' ? (val > 0 ? 1 : 0.1) : Math.min(val, 8) / 8;
+          let alphaHex = Math.floor(intensity * 255).toString(16).padStart(2, '0');
+          td.style.backgroundColor = info.color + alphaHex;
+          td.innerText = info.type === 'yn' ? (val > 0 ? 'Y' : 'N') : `${val}h`;
 
-        let gridDiv = document.createElement('div');
-        gridDiv.style.display = 'flex';
-        gridDiv.style.flexWrap = 'wrap';
-        gridDiv.style.gap = '4px';
-
-        let categoryVals = history.map(entry => {
-          let m = entry.habits.find(h => h.name === habit.name);
-          if (!m) return 0;
-          return m.type === 'yn' ? (m.units > 0 ? 1 : 0) : Math.min(m.units, 8);
-        });
-
-        history.forEach((entry, eIdx) => {
-          let val = categoryVals[eIdx];
-          let intensity = habit.type === 'yn' ? (val > 0 ? 1.0 : 0.15) : Math.max(0.2, val / 8);
-
-          let square = document.createElement('div');
-          square.style.width = '24px';
-          square.style.height = '20px';
-          square.style.backgroundColor = habit.color;
-          square.style.opacity = intensity;
-          square.style.border = '1px solid #fff';
-          square.style.display = 'flex';
-          square.style.alignItems = 'center';
-          square.style.justifyContent = 'center';
-          square.style.fontSize = '8px';
-          square.style.color = '#fff';
-          square.style.cursor = 'pointer';
-          square.innerText = `${eIdx + 1}`;
-
-          square.onmousemove = (ev) => {
-            let breakdownLines = entry.habits.map(h => {
-              let isYesNo = h.type === 'yn';
-              let displayVal = isYesNo ? (h.units > 0 ? 'YES' : 'NO') : `${Math.min(h.units, 8)}h`;
-              let pctBar = isYesNo ? (h.units > 0 ? 100 : 10) : Math.round((Math.min(h.units, 8) / 8) * 100);
-              return `
-              <div style="margin-bottom:4px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span style="color:${h.color}; display:flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; background:${h.color}; display:inline-block;"></span>${h.name}:</span> 
-                  <b style="color:#fff;">${displayVal}</b>
-                </div>
-                <div style="width:100%; background:#222; height:4px; margin-top:2px; border:1px solid #444;">
-                  <div style="width:${pctBar}%; background:${h.color}; height:100%;"></div>
-                </div>
-              </div>`;
-            }).join('');
-
+          td.onmouseenter = (e) => {
             tooltip.style.display = 'block';
-            tooltip.style.left = (ev.clientX + 15) + 'px';
-            tooltip.style.top = (ev.clientY - 40) + 'px';
-            tooltip.innerHTML = `<b style="color:#a3e635; border-bottom:1px solid #444; display:block; padding-bottom:3px; margin-bottom:6px;">Day ${eIdx + 1} Log</b>${breakdownLines}`;
+            tooltip.style.left = (e.clientX + 10) + 'px';
+            tooltip.style.top = (e.clientY + 10) + 'px';
+            tooltip.innerHTML = `<b>Trait:</b> ${traitName}<br><b>Value:</b> ${val}${info.type === 'hours' ? ' hrs' : (val > 0 ? ' (Yes)' : ' (No)}')}`;
           };
-          square.onmouseleave = () => tooltip.style.display = 'none';
-          gridDiv.appendChild(square);
-        });
+          td.onmouseleave = () => { tooltip.style.display = 'none'; };
 
-        rowWrapper.appendChild(gridDiv);
-        heatContainer.appendChild(rowWrapper);
+          tr.appendChild(td);
+        });
+        table.appendChild(tr);
       });
 
-      let circleCol = document.createElement('div');
-      circleCol.className = 'compact-stat-card';
-      circleCol.style.maxWidth = '180px';
-      circleCol.innerHTML = `
-        <div style="font-size: 13px; font-weight: bold; color: #fff; text-align: center; border-bottom: 1px dashed #555; padding-bottom: 6px; margin-bottom: 6px;">TRAIT RATIO</div>
-        <div style="display: flex; justify-content: center;">
-          <canvas id="circle-graph-canvas" width="100" height="100"></canvas>
-        </div>
-        <div id="circle-legend" style="font-size: 10px; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; align-items: center;"></div>
-      `;
-      reportBox.appendChild(circleCol);
+      heatContainer.appendChild(table);
 
-      monthData.habits.forEach((habit, idx) => {
-        let categoryVals = history.map(entry => {
-          let m = entry.habits.find(h => h.name === habit.name);
-          if (!m) return 0;
-          return m.type === 'yn' ? (m.units > 0 ? 1 : 0) : Math.min(m.units, 8);
+      let trendCvs = document.getElementById('trend-canvas');
+      let trCtx = trendCvs.getContext('2d');
+      trCtx.clearRect(0, 0, trendCvs.width, trendCvs.height);
+
+      let padding = 30;
+      let graphW = trendCvs.width - (padding * 2);
+      let graphH = trendCvs.height - (padding * 2);
+
+      trCtx.strokeStyle = '#444';
+      trCtx.lineWidth = 1;
+      trCtx.beginPath();
+      trCtx.moveTo(padding, padding);
+      trCtx.lineTo(padding, trendCvs.height - padding);
+      trCtx.lineTo(trendCsv.width - padding, trendCvs.height - padding);
+      trCtx.stroke();
+
+      let maxSteps = Math.max(history.length, 1);
+      Object.keys(habitMap).forEach(traitName => {
+        let info = habitMap[traitName];
+        trCtx.strokeStyle = info.color;
+        trCtx.lineWidth = 2;
+        trCtx.beginPath();
+
+        info.values.forEach((val, idx) => {
+          let px = padding + (idx / (maxSteps - 1 || 1)) * graphW;
+          let normVal = info.type === 'yn' ? (val > 0 ? 1 : 0) : Math.min(val, 8) / 8;
+          let py = (trendCvs.height - padding) - (normVal * graphH);
+
+          if (idx === 0) trCtx.moveTo(px, py);
+          else trCtx.lineTo(px, py);
+
+          trCtx.fillStyle = info.color;
+          trCtx.fillRect(px - 2, py - 2, 4, 4);
         });
-
-        let latestVal = categoryVals[categoryVals.length - 1] || 0;
-        let firstVal = categoryVals[0] || latestVal;
-        let diffSinceBeginning = firstVal > 0 ? Math.round(((latestVal - firstVal) / firstVal) * 100) : 0;
-
-        let weekAgoIdx = Math.max(0, categoryVals.length - 7);
-        let weekAgoVal = categoryVals[weekAgoIdx];
-        let diffLastWeek = weekAgoVal > 0 ? Math.round(((latestVal - weekAgoVal) / weekAgoVal) * 100) : 0;
-
-        let habitTotalScore = categoryVals.reduce((a, b) => a + b, 0);
-        let ratioPct = totalScoreAcrossAll > 0 ? Math.round((habitTotalScore / totalScoreAcrossAll) * 100) : 0;
-
-        if (ratioPct > 0) {
-          pieSlices.push({
-            name: habit.name, color: habit.color, ratio: ratioPct,
-            startAngle: cumulativeAngle, endAngle: cumulativeAngle + (ratioPct / 100) * (Math.PI * 2)
-          });
-          cumulativeAngle += (ratioPct / 100) * (Math.PI * 2);
-        }
-
-        let formatDelta = (val) => {
-          let cls = val >= 0 ? 'stat-pos' : 'stat-neg';
-          let sign = val >= 0 ? '+' : '';
-          return `<span class="${cls}">${sign}${val}%</span>`;
-        };
-
-        let displayMeanOrRate = habit.type === 'yn' ? `Rate: <b>${Math.round((habitTotalScore / (history.length || 1)) * 100)}%</b>` : `Mean: <b>${(habitTotalScore / history.length).toFixed(1)}h</b>`;
-
-        let traitCol = document.createElement('div');
-        traitCol.className = 'compact-stat-card';
-        traitCol.innerHTML = `
-          <div>
-            <div style="font-size: 14px; font-weight: bold; color: ${habit.color}; text-align: center; border-bottom: 1px dashed #555; padding-bottom: 6px;">${habit.name}</div>
-            <div class="metrics-list">
-              <div>Beg: ${formatDelta(diffSinceBeginning)}</div>
-              <div>Wk: ${formatDelta(diffLastWeek)}</div>
-              <div>${displayMeanOrRate} (${ratioPct}%)</div>
-            </div>
-          </div>
-          <div style="margin-top: auto;">
-            <canvas class="mini-trait-line" id="mini-line-${idx}" width="180" height="50" style="width: 100%; height: 50px; border: 1px solid #333; background: #000; display: block;"></canvas>
-          </div>
-        `;
-        reportBox.appendChild(traitCol);
+        trCtx.stroke();
       });
-
-      setTimeout(() => {
-        let circleCvs = document.getElementById('circle-graph-canvas');
-        if (circleCvs) {
-          let cCtx = circleCvs.getContext('2d');
-          let centerX = circleCvs.width / 2;
-          let centerY = circleCvs.height / 2;
-          let radius = 40;
-
-          cCtx.clearRect(0, 0, circleCvs.width, circleCvs.height);
-          if (pieSlices.length === 0) {
-            cCtx.fillStyle = '#444';
-            cCtx.beginPath();
-            cCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            cCtx.fill();
-          } else {
-            pieSlices.forEach(slice => {
-              cCtx.fillStyle = slice.color;
-              cCtx.beginPath();
-              cCtx.moveTo(centerX, centerY);
-              cCtx.arc(centerX, centerY, radius, slice.startAngle, slice.endAngle);
-              cCtx.closePath();
-              cCtx.fill();
-              cCtx.strokeStyle = '#000';
-              cCtx.lineWidth = 1;
-              cCtx.stroke();
-            });
-          }
-
-          let legendDiv = document.getElementById('circle-legend');
-          legendDiv.innerHTML = monthData.habits.map(h => {
-            let hSum = history.reduce((acc, entry) => {
-              let m = entry.habits.find(item => item.name === h.name);
-              if (!m) return acc;
-              return acc + (m.type === 'yn' ? (m.units > 0 ? 1 : 0) : Math.min(m.units, 8));
-            }, 0);
-            let pct = totalScoreAcrossAll > 0 ? Math.round((hSum / totalScoreAcrossAll) * 100) : 0;
-            return `<div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; background: ${h.color}; border: 1px solid #fff;"></div><span><b>${h.name}</b>: ${pct}%</span></div>`;
-          }).join('');
-        }
-
-        monthData.habits.forEach((habit, idx) => {
-          let mCvs = document.getElementById(`mini-line-${idx}`);
-          if (!mCvs) return;
-          let lCtx = mCvs.getContext('2d');
-          lCtx.clearRect(0, 0, mCvs.width, mCvs.height);
-
-          let categoryVals = history.map(entry => {
-            let m = entry.habits.find(h => h.name === habit.name);
-            if (!m) return 0;
-            return m.type === 'yn' ? (m.units > 0 ? 1 : 0) : Math.min(m.units, 8);
-          });
-
-          if (categoryVals.length > 0) {
-            lCtx.strokeStyle = habit.color;
-            lCtx.lineWidth = 2;
-            lCtx.beginPath();
-
-            let maxDayCount = Math.max(history.length, 5);
-            let chartWidth = mCvs.width - 10;
-            let chartHeight = mCvs.height - 10;
-            let maxValLimit = habit.type === 'yn' ? 1 : 8;
-
-            history.forEach((entry, eIdx) => {
-              let val = categoryVals[eIdx];
-              let px = 5 + (eIdx * (chartWidth / maxDayCount));
-              let py = (mCvs.height - 5) - (val / maxValLimit) * chartHeight;
-
-              if (eIdx === 0) lCtx.moveTo(px, py);
-              else lCtx.lineTo(px, py);
-              
-              lCtx.fillStyle = habit.color;
-              lCtx.fillRect(px - 1.5, py - 1.5, 3, 3);
-            });
-            lCtx.stroke();
-          }
-        });
-
-        let trendCvs = document.getElementById('trend-canvas');
-        let parentContainer = trendCvs.parentElement;
-        trendCvs.width = parentContainer.clientWidth > 400 ? parentContainer.clientWidth - 20 : 750;
-        let tCtx2 = trendCvs.getContext('2d');
-        tCtx2.clearRect(0, 0, trendCvs.width, trendCvs.height);
-
-        tCtx2.strokeStyle = '#555';
-        tCtx2.lineWidth = 1;
-        tCtx2.beginPath();
-        tCtx2.moveTo(40, 15);
-        tCtx2.lineTo(40, trendCvs.height - 30);
-        tCtx2.lineTo(trendCvs.width - 15, trendCvs.height - 30);
-        tCtx2.stroke();
-
-        tCtx2.fillStyle = '#888';
-        tCtx2.font = '10px Courier New';
-        tCtx2.fillText("Intensity / Status", 40, 10);
-        tCtx2.fillText("Days (X-Axis)", trendCvs.width - 85, trendCvs.height - 12);
-
-        let maxDayCountMain = Math.max(history.length, 10);
-        let chartWidthMain = trendCvs.width - 65;
-        let chartHeightMain = trendCvs.height - 50;
-
-        monthData.habits.forEach((habit) => {
-          if (history.length > 0) {
-            tCtx2.strokeStyle = habit.color;
-            tCtx2.lineWidth = 2;
-            tCtx2.beginPath();
-
-            let maxValLimit = habit.type === 'yn' ? 1 : 8;
-
-            history.forEach((entry, eIdx) => {
-              let matchedHabit = entry.habits.find(h => h.name === habit.name);
-              let val = matchedHabit ? (matchedHabit.type === 'yn' ? (matchedHabit.units > 0 ? 1 : 0) : Math.min(matchedHabit.units, 8)) : 0;
-              let px = 50 + (eIdx * (chartWidthMain / maxDayCountMain));
-              let py = (trendCvs.height - 30) - (val / maxValLimit) * chartHeightMain;
-
-              if (eIdx === 0) tCtx2.moveTo(px, py);
-              else tCtx2.lineTo(px, py);
-
-              tCtx2.fillStyle = habit.color;
-              tCtx2.fillRect(px - 3, py - 3, 6, 6);
-            });
-            tCtx2.stroke();
-          }
-        });
-
-        trendCvs.onmousemove = (ev) => {
-          let rect = trendCvs.getBoundingClientRect();
-          let mouseX = ev.clientX - rect.left;
-          let dayWidth = chartWidthMain / maxDayCountMain;
-          let estimatedDayIdx = Math.round((mouseX - 50) / dayWidth);
-
-          if (estimatedDayIdx >= 0 && estimatedDayIdx < history.length) {
-            let entry = history[estimatedDayIdx];
-            let breakdownLines = entry.habits.map(h => {
-              let isYesNo = h.type === 'yn';
-              let displayVal = isYesNo ? (h.units > 0 ? 'YES' : 'NO') : `${Math.min(h.units, 8)}h`;
-              let pctBar = isYesNo ? (h.units > 0 ? 100 : 10) : Math.round((Math.min(h.units, 8) / 8) * 100);
-              return `
-              <div style="margin-bottom:4px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span style="color:${h.color}; display:flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; background:${h.color}; display:inline-block;"></span>${h.name}:</span> 
-                  <b style="color:#fff;">${displayVal}</b>
-                </div>
-                <div style="width:100%; background:#222; height:4px; margin-top:2px; border:1px solid #444;">
-                  <div style="width:${pctBar}%; background:${h.color}; height:100%;"></div>
-                </div>
-              </div>`;
-            }).join('');
-
-            tooltip.style.display = 'block';
-            tooltip.style.left = (ev.clientX + 15) + 'px';
-            tooltip.style.top = (ev.clientY - 45) + 'px';
-            tooltip.innerHTML = `<b style="color:#a3e635; border-bottom:1px solid #444; display:block; padding-bottom:3px; margin-bottom:6px;">Day ${estimatedDayIdx + 1} Log</b>${breakdownLines}`;
-          } else {
-            tooltip.style.display = 'none';
-          }
-        };
-        trendCvs.onmouseleave = () => tooltip.style.display = 'none';
-
-      }, 50);
     }
 
     window.resetEntireTracker = function() {
-      if (confirm("Are you sure you want to wipe all data and start fresh?")) {
+      if (confirm("Are you sure you want to reset all data and start over?")) {
         localStorage.removeItem(STORAGE_KEY);
         appState = getDefaultState();
         saveState();
-        location.reload();
+        initFolders();
+        renderHabitManager();
+        updateHeaderPlayerProfile();
+        alert("Tracker fully reset.");
       }
     }
 
-    window.onload = () => {
-      initFolders();
-      renderHabitManager();
-      setInterval(() => drawPreview3D(), 50);
-      
-      const simulationIntervalMs = 1000 / 60;
-      let lastSimTime = Date.now();
+    initFolders();
+    renderHabitManager();
 
-      setInterval(() => {
-        let now = Date.now();
-        let dt = (now - lastSimTime) / 1000;
-        if (dt > 0.1) dt = 0.1;
-        lastSimTime = now;
+    let lastFrameTime = performance.now();
+    function mainLoop(now) {
+      let dt = (now - lastFrameTime) / 1000;
+      if (dt > 0.2) dt = 0.2;
+      lastFrameTime = now;
 
-        runSimulationLoop(dt);
-      }, simulationIntervalMs);
+      runSimulationLoop(dt);
+      drawPreview3D();
 
-      function renderLoop() {
-        if (!document.hidden) {}
-        requestAnimationFrame(renderLoop);
-      }
-      requestAnimationFrame(renderLoop);
-    };
+      requestAnimationFrame(mainLoop);
+    }
+    requestAnimationFrame(mainLoop);
   </script>
 </body>
 </html>
