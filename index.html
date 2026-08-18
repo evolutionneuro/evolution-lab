@@ -536,8 +536,8 @@
           <div id="heatmap-container" style="width: 100%;"></div>
 
           <div style="margin-top: 15px; margin-bottom: 15px; border-top: 1px dashed #555; border-bottom: 1px dashed #555; padding-top: 10px; padding-bottom: 10px; width: 100%;">
-            <span style="font-size:13px; margin-bottom:6px; display:block;"><b>Multi-Trait Performance Trend Graph</b></span>
-            <div style="width: 100%; display: flex; justify-content: center;">
+            <span style="font-size:13px; margin-bottom:6px; display:block;"><b>Multi-Trait Performance Trend Graph (Hover spots to inspect)</b></span>
+            <div style="width: 100%; display: flex; justify-content: center; position: relative;">
               <canvas id="trend-canvas" width="800" height="220" style="cursor: crosshair; width: 100%; max-width: 100%;"></canvas>
             </div>
           </div>
@@ -2171,6 +2171,8 @@
 
       Object.keys(habitMap).forEach(traitName => {
         let info = habitMap[traitName];
+        let maxVal = Math.max(...info.values, 1);
+
         let tr = document.createElement('tr');
         let tdTitle = document.createElement('td');
         tdTitle.style.cssText = `border:1px solid #444; padding:6px; font-weight:bold; color:${info.color};`;
@@ -2181,8 +2183,8 @@
           let td = document.createElement('td');
           td.style.cssText = 'border:1px solid #444; padding:4px; text-align:center; cursor:pointer;';
           
-          let intensity = info.type === 'yn' ? (val > 0 ? 1 : 0.1) : Math.min(val, 8) / 8;
-          let alphaHex = Math.floor(intensity * 255).toString(16).padStart(2, '0');
+          let intensity = info.type === 'yn' ? (val > 0 ? 1 : 0.1) : Math.min(val / maxVal, 1);
+          let alphaHex = Math.floor(Math.max(intensity, 0.15) * 255).toString(16).padStart(2, '0');
           td.style.backgroundColor = info.color + alphaHex;
           td.innerText = info.type === 'yn' ? (val > 0 ? 'Y' : 'N') : `${val}h`;
 
@@ -2190,7 +2192,7 @@
             tooltip.style.display = 'block';
             tooltip.style.left = (e.clientX + 10) + 'px';
             tooltip.style.top = (e.clientY + 10) + 'px';
-            tooltip.innerHTML = `<b>Trait:</b> ${traitName}<br><b>Value:</b> ${val}${info.type === 'hours' ? ' hrs' : (val > 0 ? ' (Yes)' : ' (No)}')}`;
+            tooltip.innerHTML = `<b>Trait:</b> ${traitName}<br><b>Value:</b> ${val}${info.type === 'hours' ? ' hrs' : (val > 0 ? ' (Yes)' : ' (No)')}<br><b>Category Max:</b> ${maxVal}`;
           };
           td.onmouseleave = () => { tooltip.style.display = 'none'; };
 
@@ -2218,58 +2220,105 @@
       trCtx.stroke();
 
       let maxSteps = Math.max(history.length, 1);
+      let trendDataPoints = [];
+
       Object.keys(habitMap).forEach(traitName => {
         let info = habitMap[traitName];
+        let maxVal = Math.max(...info.values, 8);
+
         trCtx.strokeStyle = info.color;
         trCtx.lineWidth = 2;
         trCtx.beginPath();
 
         info.values.forEach((val, idx) => {
           let px = padding + (idx / (maxSteps - 1 || 1)) * graphW;
-          let normVal = info.type === 'yn' ? (val > 0 ? 1 : 0) : Math.min(val, 8) / 8;
+          let normVal = info.type === 'yn' ? (val > 0 ? 1 : 0) : (val / maxVal);
           let py = (trendCvs.height - padding) - (normVal * graphH);
 
           if (idx === 0) trCtx.moveTo(px, py);
           else trCtx.lineTo(px, py);
 
+          trendDataPoints.push({
+            x: px,
+            y: py,
+            trait: traitName,
+            value: val,
+            type: info.type,
+            day: history[idx] ? history[idx].timestamp : `Day ${idx + 1}`,
+            color: info.color
+          });
+
           trCtx.fillStyle = info.color;
-          trCtx.fillRect(px - 2, py - 2, 4, 4);
+          trCtx.fillRect(px - 3, py - 3, 6, 6);
         });
         trCtx.stroke();
       });
+
+      trendCvs.onmousemove = (e) => {
+        let rect = trendCvs.getBoundingClientRect();
+        let mouseX = e.clientX - rect.left;
+        let mouseY = e.clientY - rect.top;
+
+        let scaleX = trendCvs.width / rect.width;
+        let scaleY = trendCvs.height / rect.height;
+        let canvasMouseX = mouseX * scaleX;
+        let canvasMouseY = mouseY * scaleY;
+
+        let closest = null;
+        let minD = 20;
+
+        trendDataPoints.forEach(pt => {
+          let d = Math.hypot(pt.x - canvasMouseX, pt.y - canvasMouseY);
+          if (d < minD) {
+            minD = d;
+            closest = pt;
+          }
+        });
+
+        if (closest) {
+          tooltip.style.display = 'block';
+          tooltip.style.left = (e.clientX + 12) + 'px';
+          tooltip.style.top = (e.clientY + 12) + 'px';
+          tooltip.innerHTML = `
+            <span style="color:${closest.color}"><b>■ ${closest.trait}</b></span><br>
+            <b>Time:</b> ${closest.day}<br>
+            <b>Performance:</b> ${closest.value}${closest.type === 'hours' ? ' hrs' : (closest.value > 0 ? ' (Yes)' : ' (No)')}
+          `;
+        } else {
+          tooltip.style.display = 'none';
+        }
+      };
+
+      trendCvs.onmouseleave = () => {
+        tooltip.style.display = 'none';
+      };
+
+      Object.keys(habitMap).forEach(traitName => {
+        let info = habitMap[traitName];
+        let totalVal = info.values.reduce((a, b) => a + b, 0);
+        let avgVal = info.values.length > 0 ? (totalVal / info.values.length).toFixed(1) : 0;
+
+        let card = document.createElement('div');
+        card.className = 'compact-stat-card';
+        card.innerHTML = `
+          <div style="font-weight:bold; color:${info.color}; font-size:12px; border-bottom:1px solid #333; padding-bottom:4px;">${traitName}</div>
+          <div class="metrics-list">
+            <span>Total Units: <b>${totalVal}</b></span>
+            <span>Daily Average: <b>${avgVal}${info.type === 'hours' ? 'h' : ''}</b></span>
+          </div>
+          <div style="font-size:10px; color:#888;">Mode: ${info.type.toUpperCase()}</div>
+        `;
+        reportBox.appendChild(card);
+      });
     }
 
-    window.resetEntireTracker = function() {
-      if (confirm("Are you sure you want to completely wipe all months, habits, and population data?")) {
-        localStorage.removeItem(STORAGE_KEY);
-        appState = getDefaultState();
-        saveState();
-        initFolders();
-        renderHabitManager();
-        updateHeaderPlayerProfile();
-        alert("Tracker fully reset.");
-      }
-    };
+    setInterval(() => {
+      runSimulationLoop(1/60);
+      drawPreview3D();
+    }, 1000 / 60);
 
     initFolders();
     renderHabitManager();
-
-    // ==========================================
-    // REAL-TIME BACKGROUND SIMULATION TICKER
-    // ==========================================
-    let lastWallTime = Date.now();
-    function globalSimulationTicker() {
-      let now = Date.now();
-      let dt = (now - lastWallTime) / 1000;
-      lastWallTime = now;
-      if (dt > 0.5) dt = 0.5; // Cap delta time to prevent large jumps after long tab switches
-
-      runSimulationLoop(dt);
-      drawPreview3D();
-    }
-
-    // Run using setInterval to maintain real-time updates even in background tabs
-    setInterval(globalSimulationTicker, 1000 / 60);
   </script>
 </body>
 </html>
