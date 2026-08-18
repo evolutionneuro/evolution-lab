@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+[cite: 3]<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -85,6 +85,7 @@ const firebaseConfig = {
         if (logoutBtn) logoutBtn.style.display = 'none';
         if (cloudSyncBtn) cloudSyncBtn.style.display = 'none';
       }
+      updateHeaderPlayerProfile();
     });
   </script>
 
@@ -333,9 +334,63 @@ const firebaseConfig = {
     </div>
   </div>
 
+  <!-- PERSONAL SETTINGS & CABINET MODAL -->
+  <div id="settings-modal" class="retro-modal" style="width: 600px; height: 500px; margin: auto; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+    <h3>PERSONAL SETTINGS & EVOLUTION CABINET</h3>
+    <div style="flex: 1; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 14px; font-size: 12px;">
+      
+      <div>
+        <label style="display:block; margin-bottom:4px; color:#a3e635;"><b>Researcher Nickname:</b></label>
+        <input type="text" id="settings-nickname-input" style="width: 100%; box-sizing: border-box;" placeholder="Enter custom researcher alias">
+      </div>
+
+      <div>
+        <label style="display:block; margin-bottom:4px; color:#a3e635;"><b>Choose Avatar Symbol:</b></label>
+        <select id="settings-avatar-select" style="width: 100%; box-sizing: border-box;">
+          <option value="🧬">🧬 DNA Helix</option>
+          <option value="🧫">🧫 Petri Dish</option>
+          <option value="🔬">🔬 Microscope</option>
+          <option value="🧪">🧪 Test Tube</option>
+          <option value="🦠">🦠 Microbe</option>
+          <option value="⚡">⚡ Energy Core</option>
+        </select>
+      </div>
+
+      <div style="border-top: 1px dashed #444; padding-top: 10px;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" id="settings-share-habits" style="accent-color: #a3e635;">
+          <span><b>Share habits you're tracking and your progress publicly</b></span>
+        </label>
+      </div>
+
+      <div>
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" id="settings-show-biome" style="accent-color: #a3e635;" checked>
+          <span><b>Show your MONTH 1 biome in miniature near username</b></span>
+        </label>
+      </div>
+
+    </div>
+    <div style="margin-top: 10px; border-top: 1px dashed #555; padding-top: 8px; display: flex; justify-content: flex-end; gap: 8px;">
+      <button onclick="savePersonalSettings()" style="padding:6px 14px; background:#111; color:#a3e635; border:1px solid #a3e635;">SAVE & APPLY</button>
+      <button onclick="playSound('sound3'); toggleSettingsModal(false)" style="padding:6px 14px;">CLOSE</button>
+    </div>
+  </div>
+
   <div class="retro-window">
     <div class="window-header">
-      <span>SYSTEM://CHRONO_EVOLUTION_LAB.EXE [CLOUD-SYNC V22]</span>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span>SYSTEM://CHRONO_EVOLUTION_LAB.EXE</span>
+        <!-- LIVE HEADER PROFILE & MINIATURE BIOME PREVIEW -->
+        <div id="header-user-display" style="display: flex; align-items: center; gap: 6px; background: #000; color: #fff; padding: 2px 8px; border: 1px solid #777; font-size: 11px; cursor: pointer;" onclick="openSettingsModal()" title="Click to open Personal Cabinet Settings">
+          <span id="header-avatar">🧬</span>
+          <span id="header-nickname" style="color: #a3e635; font-weight: bold;">Researcher</span>
+          <span style="color: #777;">|</span>
+          <span>Pop: <b id="header-stat-pop" style="color: #34d399;">0</b></span>
+          <span>Eaten: <b id="header-stat-eaten" style="color: #fbbf24;">0</b></span>
+          <canvas id="header-biome-mini" width="36" height="18" style="border: 1px solid #555; background: #000; vertical-align: middle; display: none;"></canvas>
+        </div>
+      </div>
       <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
         <!-- FIREBASE AUTH & CLOUD CONTROLS -->
         <span id="auth-status-text" style="font-size:10px; color:#fbbf24; margin-right:4px;">STATUS: GUEST</span>
@@ -344,6 +399,7 @@ const firebaseConfig = {
         <button id="cloud-sync-btn" onclick="saveUserDataToCloud()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#34d399; border:1px solid #34d399; display:none;" title="Publish stats to leaderboard & save to Cloud">[ SYNC TO CLOUD ]</button>
         <button id="leaderboard-btn" onclick="openLeaderboard()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#a3e635; border:1px solid #a3e635; display:none;">[ LEADERBOARD ]</button>
 
+        <button onclick="openSettingsModal()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#60a5fa; border:1px solid #60a5fa;">[ CABINET ]</button>
         <button onclick="exportJSONBackup()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#a3e635; border:1px solid #a3e635;">[ EXPORT JSON ]</button>
         <button onclick="document.getElementById('import-file-input').click()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#60a5fa; border:1px solid #60a5fa;">[ IMPORT JSON ]</button>
         <span style="margin-left: 10px;">[_-X]</span>
@@ -482,7 +538,9 @@ const firebaseConfig = {
         let userDocRef = window.FB_doc(window.FB_DB, "labs", userId);
         await window.FB_setDoc(userDocRef, {
           email: window.currentFirebaseUser.email,
-          displayName: window.currentFirebaseUser.displayName || "Anonymous Researcher",
+          displayName: appState.settings.nickname || window.currentFirebaseUser.displayName || "Anonymous Researcher",
+          avatar: appState.settings.avatar || "🧬",
+          shareHabits: appState.settings.shareHabits,
           appState: appState,
           lastUpdated: window.FB_serverTimestamp()
         });
@@ -500,9 +558,10 @@ const firebaseConfig = {
         let leaderboardRef = window.FB_doc(window.FB_DB, "leaderboard", userId);
         await window.FB_setDoc(leaderboardRef, {
           userId: userId,
-          displayName: window.currentFirebaseUser.displayName || "Anonymous Researcher",
+          displayName: `${appState.settings.avatar || '🧬'} ${appState.settings.nickname || window.currentFirebaseUser.displayName || 'Researcher'}`,
           totalPopulation: totalPopAcrossAllMonths,
           islandsEaten: totalIslandsAcrossAllMonths,
+          shareHabits: appState.settings.shareHabits,
           updatedAt: window.FB_serverTimestamp()
         });
 
@@ -524,9 +583,13 @@ const firebaseConfig = {
           let cloudData = docSnap.data();
           if (cloudData && cloudData.appState) {
             appState = cloudData.appState;
+            if (!appState.settings) {
+              appState.settings = { nickname: window.currentFirebaseUser.displayName || "Researcher", avatar: "🧬", shareHabits: true, showBiome: true };
+            }
             saveState();
             initFolders();
             renderHabitManager();
+            updateHeaderPlayerProfile();
             console.log("Lab state successfully loaded from Cloud!");
           }
         }
@@ -575,6 +638,58 @@ const firebaseConfig = {
     window.toggleLeaderboard = function(show) {
       let modal = document.getElementById('leaderboard-modal');
       if (modal) modal.style.display = show ? 'flex' : 'none';
+    }
+
+    window.toggleSettingsModal = function(show) {
+      let modal = document.getElementById('settings-modal');
+      if (modal) {
+        if (show) {
+          document.getElementById('settings-nickname-input').value = appState.settings.nickname || 'Researcher';
+          document.getElementById('settings-avatar-select').value = appState.settings.avatar || '🧬';
+          document.getElementById('settings-share-habits').checked = !!appState.settings.shareHabits;
+          document.getElementById('settings-show-biome').checked = appState.settings.showBiome !== false;
+        }
+        modal.style.display = show ? 'flex' : 'none';
+      }
+    }
+
+    window.openSettingsModal = function() {
+      playSound('sound1');
+      toggleSettingsModal(true);
+    }
+
+    window.savePersonalSettings = function() {
+      playSound('sound2');
+      let nickInput = document.getElementById('settings-nickname-input').value.trim();
+      let avatarSelect = document.getElementById('settings-avatar-select').value;
+      let shareCheck = document.getElementById('settings-share-habits').checked;
+      let biomeCheck = document.getElementById('settings-show-biome').checked;
+
+      appState.settings.nickname = nickInput || 'Researcher';
+      appState.settings.avatar = avatarSelect;
+      appState.settings.shareHabits = shareCheck;
+      appState.settings.showBiome = biomeCheck;
+
+      saveState();
+      updateHeaderPlayerProfile();
+      toggleSettingsModal(false);
+    }
+
+    function updateHeaderPlayerProfile() {
+      let nicknameElem = document.getElementById('header-nickname');
+      let avatarElem = document.getElementById('header-avatar');
+      let miniCvs = document.getElementById('header-biome-mini');
+
+      if (nicknameElem) nicknameElem.innerText = appState.settings.nickname || 'Researcher';
+      if (avatarElem) avatarElem.innerText = appState.settings.avatar || '🧬';
+
+      if (miniCvs) {
+        if (appState.settings.showBiome !== false) {
+          miniCvs.style.display = 'inline-block';
+        } else {
+          miniCvs.style.display = 'none';
+        }
+      }
     }
 
     // --- EXISTING LAB SCRIPT LOGIC ---
@@ -632,7 +747,7 @@ const firebaseConfig = {
       }
     }
 
-    const STORAGE_KEY = 'CHRONO_DNA_PUBLIC_V21';
+    const STORAGE_KEY = 'CHRONO_DNA_PUBLIC_V22';
 
     const AVAILABLE_MORPHS = [
       { id: 'flagella', label: 'Flagella (Speed/Tail)' },
@@ -672,7 +787,11 @@ const firebaseConfig = {
           lastSavedTimestamp: Date.now()
         };
       }
-      return { activeMonth: 1, months: months };
+      return { 
+        activeMonth: 1, 
+        settings: { nickname: 'Researcher', avatar: '🧬', shareHabits: true, showBiome: true },
+        months: months 
+      };
     }
 
     let appState = loadState();
@@ -683,6 +802,9 @@ const firebaseConfig = {
         try { 
           let parsed = JSON.parse(saved);
           let now = Date.now();
+          if (!parsed.settings) {
+            parsed.settings = { nickname: 'Researcher', avatar: '🧬', shareHabits: true, showBiome: true };
+          }
           for (let i = 1; i <= 12; i++) {
             if (!parsed.months[i]) {
               parsed.months[i] = getDefaultState().months[i];
@@ -754,9 +876,11 @@ const firebaseConfig = {
           let importedData = JSON.parse(e.target.result);
           if (importedData && importedData.months) {
             appState = importedData;
+            if (!appState.settings) appState.settings = { nickname: 'Researcher', avatar: '🧬', shareHabits: true, showBiome: true };
             saveState();
             initFolders();
             renderHabitManager();
+            updateHeaderPlayerProfile();
             alert("Backup successfully imported and loaded!");
           } else {
             alert("Invalid backup file format.");
@@ -1314,6 +1438,7 @@ const firebaseConfig = {
           if (isMouseDown) updateMousePos(e, cvs);
         });
       }
+      updateHeaderPlayerProfile();
     });
 
     function updateMousePos(e, cvs) {
@@ -1351,6 +1476,40 @@ const firebaseConfig = {
         ctx.fillRect(px - 1, py - 1, 2, 2);
       });
       ctx.stroke();
+    }
+
+    function renderHeaderMiniBiome() {
+      let miniCvs = document.getElementById('header-biome-mini');
+      if (!miniCvs || appState.settings.showBiome === false) return;
+      let mCtx = miniCvs.getContext('2d');
+      mCtx.clearRect(0, 0, miniCvs.width, miniCvs.height);
+
+      let m1 = appState.months[1];
+      if (!m1) return;
+
+      let scaleX = miniCvs.width / 660;
+      let scaleY = miniCvs.height / 260;
+
+      m1.stones.forEach(st => {
+        mCtx.fillStyle = '#525252';
+        mCtx.beginPath();
+        mCtx.arc(st.x * scaleX, st.y * scaleY, Math.max(1, st.baseRadius * scaleX), 0, Math.PI * 2);
+        mCtx.fill();
+      });
+
+      m1.plants.forEach(pl => {
+        pl.pixels.forEach(px => {
+          if (px.alive) {
+            mCtx.fillStyle = '#34d399';
+            mCtx.fillRect((pl.x + px.offsetX) * scaleX, (pl.y + px.offsetY) * scaleY, 1.5, 1.5);
+          }
+        });
+      });
+
+      m1.population.forEach(org => {
+        mCtx.fillStyle = org.habitsSnapshot[0]?.color || '#f87171';
+        mCtx.fillRect(org.x * scaleX - 1, org.y * scaleY - 1, 2, 2);
+      });
     }
 
     function runSimulationLoop(dt) {
@@ -1621,7 +1780,9 @@ const firebaseConfig = {
 
         let popCount = monthData.population.length;
         document.getElementById('stat-pop').innerText = popCount;
+        document.getElementById('header-stat-pop').innerText = popCount;
         document.getElementById('stat-islands-eaten').innerText = monthData.islandsEatenCount;
+        document.getElementById('header-stat-eaten').innerText = monthData.islandsEatenCount;
         renderGenePoolGraph(monthData);
 
         let avgWellbeing = popCount > 0 ? Math.round(totalWellbeingSum / popCount) : 0;
@@ -1637,11 +1798,14 @@ const firebaseConfig = {
         document.getElementById('stat-gene').innerText = dominant ? `${dominant.name} (${dominant.morph})` : 'None';
       } else {
         document.getElementById('stat-pop').innerText = '0';
+        document.getElementById('header-stat-pop').innerText = '0';
+        document.getElementById('header-stat-eaten').innerText = monthData.islandsEatenCount || 0;
         document.getElementById('stat-wellbeing').innerText = '0%';
         document.getElementById('stat-gene').innerText = 'None';
         document.getElementById('stat-islands-eaten').innerText = monthData.islandsEatenCount || 0;
         renderGenePoolGraph(monthData);
       }
+      renderHeaderMiniBiome();
     }
 
     window.toggleAnalytics = function(show) {
