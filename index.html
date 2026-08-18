@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CHRONO-DNA // Personal Evolution Lab + Audio Files</title>
+  <style>
+    body {
+      background-color: #020202;
+      color: #f0f0f0;
+      font-family: 'Courier New', Courier, monospace;
+      margin: 0;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+    }
+    .retro-window {
+      width: 1450px;
+      background: #0a0a0a;
+      border: 4px solid #ffffff;
+      box-shadow: 12px 12px 0px #1f1f1f;
+    }
+    .window-header {
+      background: #ffffff;
+      color: #000000;
+      padding: 8px 14px;
+      font-weight: bold;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .window-body {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+    }
+    .panel {
+      flex: 1;
+      border: 1px dashed #555555;
+      padding: 15px;
+      background: #050505;
+    }
+    h3 {
+      font-size: 14px;
+      border-bottom: 2px solid #ffffff;
+      padding-bottom: 5px;
+      margin-top: 0;
+      color: #a3e635;
+    }
+    button {
+      background: #000000;
+      color: #ffffff;
+      border: 2px outset #ffffff;
+      padding: 8px 14px;
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    button:active {
+      border-style: inset;
+      background: #222222;
+    }
+    input[type="text"], input[type="number"], select, input[type="color"] {
+      background: #000;
+      color: #fff;
+      border: 1px solid #fff;
+      padding: 5px;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    input[type="color"] {
+      width: 32px;
+      height: 26px;
+      padding: 0;
+      cursor: pointer;
+      border: 1px solid #fff;
+      vertical-align: middle;
+    }
+    .habit-row {
+      display: flex;
+      flex-direction: column;
+      background: #111111;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      border: 1px solid #444;
+      font-size: 12px;
+      gap: 6px;
+    }
+    .habit-row-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .habit-row-bottom {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .nucleotide-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .nucleotide-block {
+      width: 38px;
+      height: 38px;
+      border: 1px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .folder-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .folder-card {
+      border: 1px solid #777;
+      background: #111;
+      padding: 6px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .folder-card:hover {
+      border-color: #a3e635;
+      background: #1a1a1a;
+    }
+    canvas {
+      border: 2px solid #ffffff;
+      background: #000000;
+      display: block;
+    }
+    .retro-modal {
+      display: none;
+      position: fixed;
+      top: 2%;
+      left: 2%;
+      width: 96%;
+      height: 96%;
+      background: #080808;
+      border: 4px solid #fff;
+      box-shadow: 14px 14px 0px #1a1a1a;
+      z-index: 100;
+      padding: 15px;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing: border-box;
+    }
+    .matrix-split {
+      display: flex;
+      gap: 15px;
+      flex: 1;
+      overflow: hidden;
+      width: 100%;
+    }
+    .matrix-pane {
+      border: 1px dashed #777;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-sizing: border-box;
+    }
+    .stat-pos { color: #a3e635; font-weight: bold; }
+    .stat-neg { color: #f87171; font-weight: bold; }
+    
+    .compact-stats-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      margin-top: 10px;
+      box-sizing: border-box;
+      flex-wrap: wrap;
+    }
+    .compact-stat-card {
+      flex: 1;
+      min-width: 150px;
+      border: 1px solid #444;
+      background: #0d0d0d;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .compact-stat-card .metrics-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOCAL AUDIO FILES MAPPING -->
+  <audio id="sound1" src="sound1.mp3" preload="auto"></audio>
+  <audio id="sound2" src="sound2.mp3" preload="auto"></audio>
+  <audio id="sound3" src="sound3.mp3" preload="auto"></audio>
+
+  <!-- HIDDEN FILE INPUT FOR JSON RESTORE -->
+  <input type="file" id="import-file-input" style="display: none;" accept=".json" onchange="importJSONBackup(event)">
+
+  <div class="retro-window">
+    <div class="window-header">
+      <span>SYSTEM://CHRONO_EVOLUTION_LAB.EXE [BACKUP-ENABLED V22]</span>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button onclick="exportJSONBackup()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#a3e635; border:1px solid #a3e635;">[ EXPORT JSON BACKUP ]</button>
+        <button onclick="document.getElementById('import-file-input').click()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#60a5fa; border:1px solid #60a5fa;">[ IMPORT JSON BACKUP ]</button>
+        <span style="margin-left: 10px;">[_-X]</span>
+      </div>
+    </div>
+    
+    <div class="window-body">
+      <!-- LEFT COLUMN -->
+      <section class="panel">
+        <h3>1. PUBLIC HABIT & MORPHOLOGY CONFIG</h3>
+        <div style="margin-bottom: 10px; display: flex; gap: 8px;">
+          <input type="text" id="new-habit-input" placeholder="Trait (e.g. Wake Up Early)" style="flex:1;">
+          <button onclick="playSound('sound1'); addHabitCategory()">+ ADD TRAIT</button>
+        </div>
+        <div id="habit-list-container" style="max-height: 320px; overflow-y: auto; margin-bottom: 12px;"></div>
+
+        <h3>2. NUCLEOTIDE DNA STRAND</h3>
+        <p style="font-size:11px; color:#aaa;">Click blocks to configure intensity / toggle Yes/No state.</p>
+        <div id="dna-strand-builder" class="nucleotide-grid"></div>
+
+        <h3>3. 3D ORTHOGRAPHIC PREVIEW</h3>
+        <canvas id="preview-canvas" width="380" height="150"></canvas>
+        <button style="width:100%; margin-top:10px; background:#111; color:#a3e635; padding: 12px;" onclick="playSound('sound2'); spawnBacteria()">[ SPAWN ORGANISM INTO ACTIVE TANK ]</button>
+        <button onclick="playSound('sound3'); resetEntireTracker()" style="background:#400; color:#fff; width:100%; margin-top:8px; padding:6px;">[ RESET ALL DATA & START OVER ]</button>
+      </section>
+
+      <!-- RIGHT COLUMN -->
+      <section class="panel">
+        <h3>CHRONOLOGICAL TANK ARCHIVE (1-12 MONTHS)</h3>
+        <div id="folder-grid" class="folder-grid"></div>
+
+        <h3>ACTIVE ECOSYSTEM (MONTH <span id="active-month-label">1</span>)</h3>
+        <canvas id="simulation-canvas" width="660" height="260"></canvas>
+        
+        <!-- SOUND TOGGLE & STATS CONTROL BAR -->
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <button id="sim-sound-toggle" onclick="toggleSimSound()" style="flex: 1; background: #111; color: #f87171; border: 1px solid #555; font-size: 11px; padding: 6px;">
+            SOUNDS: OFF [CLICK TO ENABLE]
+          </button>
+        </div>
+
+        <!-- WELL-BEING & STATUS PANEL -->
+        <div style="background:#111; border:1px solid #444; padding:8px 12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering:crispEdges;">
+              <path d="M2,1 h2 v1 h2 v-1 h2 v2 h-1 v1 h-1 v1 h-1 v1 h-1 v-1 h-1 v-1 h-1 v-1 h-1 v-2 z" fill="#f87171"/>
+            </svg>
+            <span style="font-size:12px;">Bacteria Well-Being: <b id="stat-wellbeing" style="color:#f87171;">100%</b></span>
+          </div>
+          <div style="font-size:12px;">
+            Population: <b id="stat-pop">0</b> | Dominant Morph: <b id="stat-gene">Balanced</b>
+          </div>
+        </div>
+
+        <!-- ADDITIONAL STATS: ISLANDS EATEN & GENE POOL MINI-GRAPH -->
+        <div style="background:#0d0d0d; border:1px solid #444; padding:8px 12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <div style="font-size:11px; display:flex; flex-direction:column; gap:2px; min-width: 140px;">
+            <span>Islands Eaten: <b id="stat-islands-eaten" style="color:#34d399;">0</b></span>
+            <span style="font-size:10px; color:#aaa;">Gene Pool Diversity</span>
+          </div>
+          <div style="flex: 1; display: flex; justify-content: flex-end;">
+            <canvas id="gene-pool-graph" width="220" height="35" style="border: 1px solid #333; background: #000; width: 100%; max-width: 220px; height: 35px;"></canvas>
+          </div>
+        </div>
+
+        <button id="open-analytics-btn" style="width:100%; margin-top:12px; padding: 10px;" onclick="playSound('sound1'); toggleAnalytics(true)">OPEN PHYLOGENY & HEATMAP MATRIX</button>
+      </section>
+    </div>
+  </div>
+
+  <!-- ANALYTICS MODAL -->
+  <div id="analytics-modal" class="retro-modal">
+    <h3>EVOLUTIONARY PHYLOGENY & HABIT ANALYTICS MATRIX</h3>
+    <div class="matrix-split">
+      <div class="matrix-pane" style="flex: 0.6; min-width: 280px;">
+        <span style="font-size:13px; margin-bottom:8px;"><b>Phylogenetic Lineage Tree</b></span>
+        <canvas id="phylogeny-canvas" width="300" height="520"></canvas>
+      </div>
+      <div class="matrix-pane" style="flex: 1.4; display: flex; flex-direction: column; overflow: hidden; width: 100%;">
+        <span style="font-size:13px; margin-bottom:8px; flex-shrink: 0;"><b>Habit Intensity Heatmaps Matrix</b></span>
+        
+        <div style="flex: 1; overflow-y: auto; width: 100%; min-height: 0; padding-right: 4px;">
+          <div id="heatmap-container" style="width: 100%;"></div>
+
+          <div style="margin-top: 15px; margin-bottom: 15px; border-top: 1px dashed #555; border-bottom: 1px dashed #555; padding-top: 10px; padding-bottom: 10px; width: 100%;">
+            <span style="font-size:13px; margin-bottom:6px; display:block;"><b>Multi-Trait Performance Trend Graph</b></span>
+            <div style="width: 100%; display: flex; justify-content: center;">
+              <canvas id="trend-canvas" width="800" height="220" style="cursor: crosshair; width: 100%; max-width: 100%;"></canvas>
+            </div>
+          </div>
+
+          <div id="progression-report-box" class="compact-stats-row"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="matrix-tooltip" style="display:none; position:fixed; width: 240px; background:#111; border:2px solid #fff; padding:10px; font-size:11px; z-index:999; pointer-events:none; color:#fff; box-shadow: 4px 4px 0px #333; line-height: 1.4;"></div>
+
+    <div style="margin-top: 10px; border-top: 1px dashed #555; padding-top: 8px; display: flex; justify-content: flex-end;">
+      <button onclick="playSound('sound3'); toggleAnalytics(false)" style="padding:6px 14px;">CLOSE MATRIX</button>
+    </div>
+  </div>
+
+  <script>
+    function playSound(soundId) {
+      let audioElem = document.getElementById(soundId);
+      if (audioElem) {
+        audioElem.currentTime = 0;
+        audioElem.play().catch(e => {
+          console.log("Audio play blocked or file missing:", e);
+        });
+      }
+    }
+
+    let simulationSoundEnabled = false;
+    let audioCtx = null;
+
+    function toggleSimSound() {
+      simulationSoundEnabled = !simulationSoundEnabled;
+      let btn = document.getElementById('sim-sound-toggle');
+      if (simulationSoundEnabled) {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } else if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        btn.innerText = "SOUNDS: ON [CLICK TO DISABLE]";
+        btn.style.color = "#a3e635";
+      } else {
+        btn.innerText = "SOUNDS: OFF [CLICK TO ENABLE]";
+        btn.style.color = "#f87171";
+      }
+    }
+
+    function playChewClickSound() {
+      if (!simulationSoundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800 + Math.random() * 300, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.04);
+
+        gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.04);
+      } catch (e) {
+        console.log("Web Audio API error:", e);
+      }
+    }
+
+    const STORAGE_KEY = 'CHRONO_DNA_PUBLIC_V21';
+
+    const AVAILABLE_MORPHS = [
+      { id: 'flagella', label: 'Flagella (Speed/Tail)' },
+      { id: 'shield', label: 'Shield (Defense Ring)' },
+      { id: 'bodysize', label: 'Body Size (Core Radius)' },
+      { id: 'antennas', label: 'Antennas (Sensors)' },
+      { id: 'spikes', label: 'Spikes (Surface Density)' },
+      { id: 'modules', label: 'Attached Modules (Worm Chain)' }
+    ];
+
+    function getDefaultState() {
+      let months = {};
+      for (let i = 1; i <= 12; i++) {
+        months[i] = {
+          monthId: i,
+          habits: [
+            { name: 'Spanish', type: 'hours', units: 4, color: '#f87171', morph: 'flagella' },
+            { name: 'Wake Early', type: 'yn', units: 1, color: '#60a5fa', morph: 'shield' },
+            { name: 'German', type: 'hours', units: 4, color: '#a3e635', morph: 'bodysize' }
+          ],
+          dnaStrand: [
+            { type: 'Spanish', habitType: 'hours', color: '#f87171', value: 4, morph: 'flagella' },
+            { type: 'Wake Early', habitType: 'yn', color: '#60a5fa', value: 1, morph: 'shield' },
+            { type: 'German', habitType: 'hours', color: '#a3e635', value: 4, morph: 'bodysize' }
+          ],
+          population: [],
+          deadSpots: [],
+          floatingFood: [],
+          hearts: [],
+          plants: [],
+          stones: [],
+          plantParticles: [],
+          phylogenyTree: [],
+          performanceHistory: [],
+          islandsEatenCount: 0,
+          genePoolHistory: [],
+          lastSavedTimestamp: Date.now()
+        };
+      }
+      return { activeMonth: 1, months: months };
+    }
+
+    let appState = loadState();
+
+    function loadState() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try { 
+          let parsed = JSON.parse(saved);
+          let now = Date.now();
+          for (let i = 1; i <= 12; i++) {
+            if (!parsed.months[i]) {
+              parsed.months[i] = getDefaultState().months[i];
+            } else {
+              if (!parsed.months[i].habits) parsed.months[i].habits = getDefaultState().months[i].habits;
+              if (!parsed.months[i].dnaStrand) parsed.months[i].dnaStrand = getDefaultState().months[i].dnaStrand;
+              if (!parsed.months[i].deadSpots) parsed.months[i].deadSpots = [];
+              if (!parsed.months[i].floatingFood) parsed.months[i].floatingFood = [];
+              if (!parsed.months[i].hearts) parsed.months[i].hearts = [];
+              if (!parsed.months[i].plants) parsed.months[i].plants = [];
+              if (!parsed.months[i].stones) parsed.months[i].stones = [];
+              if (!parsed.months[i].plantParticles) parsed.months[i].plantParticles = [];
+              if (parsed.months[i].islandsEatenCount === undefined) parsed.months[i].islandsEatenCount = 0;
+              if (!parsed.months[i].genePoolHistory) parsed.months[i].genePoolHistory = [];
+              
+              let lastTime = parsed.months[i].lastSavedTimestamp || now;
+              let elapsedHours = (now - lastTime) / (1000 * 60 * 60);
+              if (elapsedHours > 0 && parsed.months[i].population) {
+                let dropAmount = elapsedHours * 4;
+                parsed.months[i].population.forEach(org => {
+                  org.wellbeing = Math.max(0, org.wellbeing - dropAmount);
+                });
+              }
+              parsed.months[i].lastSavedTimestamp = now;
+            }
+          }
+          return parsed; 
+        } catch (e) { console.error(e); }
+      }
+      return getDefaultState();
+    }
+
+    function saveState() {
+      let now = Date.now();
+      for (let i = 1; i <= 12; i++) {
+        if (appState.months[i]) {
+          appState.months[i].lastSavedTimestamp = now;
+          appState.months[i].deadSpots = [];
+          appState.months[i].floatingFood = [];
+          appState.months[i].hearts = [];
+          appState.months[i].plantParticles = [];
+        }
+      }
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        console.error("LocalStorage save failed (Quota Exceeded):", e);
+      }
+    }
+
+    // Backup & Restore JSON Functions
+    function exportJSONBackup() {
+      saveState();
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `chrono_dna_backup_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importJSONBackup(event) {
+      let file = event.target.files[0];
+      if (!file) return;
+      let reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          let importedData = JSON.parse(e.target.result);
+          if (importedData && importedData.months) {
+            appState = importedData;
+            saveState();
+            initFolders();
+            renderHabitManager();
+            alert("Backup successfully imported and loaded!");
+          } else {
+            alert("Invalid backup file format.");
+          }
+        } catch (err) {
+          alert("Failed to parse JSON backup file.");
+          console.error(err);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = ''; // Reset input
+    }
+
+    setInterval(() => {
+      saveState();
+    }, 10000);
+
+    function renderHabitManager() {
+      let container = document.getElementById('habit-list-container');
+      if (!container) return;
+      let monthData = appState.months[appState.activeMonth];
+
+      container.innerHTML = '';
+      monthData.habits.forEach((h, idx) => {
+        let row = document.createElement('div');
+        row.className = 'habit-row';
+
+        let usedMorphs = monthData.habits.map((item, i) => (i !== idx && item.morph !== 'modules') ? item.morph : null);
+
+        let optionsHtml = AVAILABLE_MORPHS.map(m => {
+          let isTaken = m.id !== 'modules' && usedMorphs.includes(m.id);
+          let labelText = m.label + (isTaken ? ' [Taken]' : '');
+          let styleAttr = isTaken ? 'style="background:#222; color:#777;"' : '';
+          let selectedAttr = h.morph === m.id ? 'selected' : '';
+          return `<option value="${m.id}" ${selectedAttr} ${styleAttr}>${labelText}</option>`;
+        }).join('');
+
+        let isYN = h.type === 'yn';
+
+        row.innerHTML = `
+          <div class="habit-row-top">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <input type="color" value="${h.color}" onchange="playSound('sound1'); updateHabitColor(${idx}, this.value)" title="Choose Trait Color">
+              <input type="text" value="${h.name}" onchange="updateHabitNameInline(${idx}, this.value)" style="width: 110px; font-weight: bold; background: #000; color: #fff; border: 1px solid #444; padding: 2px 4px;" title="Edit trait name directly">
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <select style="font-size:10px; padding:1px;" onchange="playSound('sound1'); updateHabitMode(${idx}, this.value)">
+                <option value="hours" ${!isYN ? 'selected' : ''}>Hours (1-8h)</option>
+                <option value="yn" ${isYN ? 'selected' : ''}>Yes / No</option>
+              </select>
+              ${isYN ? `
+                <select style="font-size:10px; padding:1px; width:50px;" onchange="playSound('sound1'); updateHabitUnits(${idx}, this.value)">
+                  <option value="1" ${h.units === 1 ? 'selected' : ''}>YES</option>
+                  <option value="0" ${h.units === 0 ? 'selected' : ''}>NO</option>
+                </select>
+              ` : `
+                <input type="number" min="0" max="8" value="${h.units}" style="width:38px;" onchange="playSound('sound1'); updateHabitUnits(${idx}, this.value)"> hrs
+              `}
+              <button onclick="playSound('sound3'); removeHabitCategory(${idx})" style="padding:2px 5px;">X</button>
+            </div>
+          </div>
+          <div class="habit-row-bottom">
+            <span style="font-size:10px; color:#aaa;">Morph:</span>
+            <select style="flex:1; font-size:11px;" onchange="playSound('sound1'); updateHabitMorph(${idx}, this.value)">
+              ${optionsHtml}
+            </select>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+      renderDNAConstructor();
+    }
+
+    window.updateHabitNameInline = function(idx, newName) {
+      newName = newName.trim();
+      if (!newName) return;
+      let monthData = appState.months[appState.activeMonth];
+      let oldName = monthData.habits[idx].name;
+      monthData.habits[idx].name = newName;
+      if (monthData.dnaStrand[idx]) {
+        monthData.dnaStrand[idx].type = newName;
+      }
+      if (monthData.performanceHistory) {
+        monthData.performanceHistory.forEach(entry => {
+          entry.habits.forEach(h => {
+            if (h.name === oldName) {
+              h.name = newName;
+            }
+          });
+        });
+      }
+      saveState();
+      renderHabitManager();
+    }
+
+    window.updateHabitMode = function(idx, mode) {
+      let monthData = appState.months[appState.activeMonth];
+      monthData.habits[idx].type = mode;
+      if (mode === 'yn') {
+        monthData.habits[idx].units = monthData.habits[idx].units > 0 ? 1 : 0;
+      } else {
+        if (monthData.habits[idx].units === 0) monthData.habits[idx].units = 4;
+      }
+      if (monthData.dnaStrand[idx]) {
+        monthData.dnaStrand[idx].habitType = mode;
+        monthData.dnaStrand[idx].value = monthData.habits[idx].units;
+      }
+      saveState();
+      renderHabitManager();
+    }
+
+    window.addHabitCategory = function() {
+      let input = document.getElementById('new-habit-input');
+      let name = input.value.trim();
+      if (!name) return;
+
+      let monthData = appState.months[appState.activeMonth];
+      let pastelColors = ['#f87171', '#60a5fa', '#a3e635', '#f472b6', '#34d399', '#fbbf24', '#818cf8'];
+      let color = pastelColors[monthData.habits.length % pastelColors.length];
+
+      let usedMorphs = monthData.habits.map(h => h.morph);
+      let availableUnused = AVAILABLE_MORPHS.find(m => m.id === 'modules' || !usedMorphs.includes(m.id));
+      let chosenMorph = availableUnused ? availableUnused.id : 'modules';
+
+      monthData.habits.push({ name: name, type: 'hours', units: 4, color: color, morph: chosenMorph });
+      monthData.dnaStrand.push({ type: name, habitType: 'hours', color: color, value: 4, morph: chosenMorph });
+
+      input.value = '';
+      saveState();
+      renderHabitManager();
+    }
+
+    window.removeHabitCategory = function(idx) {
+      let monthData = appState.months[appState.activeMonth];
+      if (!monthData.habits || monthData.habits.length === 0) return; 
+      monthData.habits.splice(idx, 1);
+      if (monthData.dnaStrand && monthData.dnaStrand[idx]) {
+        monthData.dnaStrand.splice(idx, 1);
+      }
+      saveState();
+      renderHabitManager();
+    };
+
+    window.updateHabitUnits = function(idx, val) {
+      let monthData = appState.months[appState.activeMonth];
+      let habit = monthData.habits[idx];
+      let parsed = parseFloat(val) || 0;
+      if (habit.type === 'yn') {
+        parsed = parsed > 0 ? 1 : 0;
+      } else {
+        if (parsed > 8) parsed = 8;
+      }
+      habit.units = parsed;
+      if (monthData.dnaStrand[idx]) {
+        monthData.dnaStrand[idx].value = parsed;
+      }
+      saveState();
+      renderHabitManager();
+    }
+
+    window.updateHabitColor = function(idx, newColor) {
+      let monthData = appState.months[appState.activeMonth];
+      monthData.habits[idx].color = newColor;
+      if (monthData.dnaStrand[idx]) {
+        monthData.dnaStrand[idx].color = newColor;
+      }
+      saveState();
+      renderHabitManager();
+    }
+
+    window.updateHabitMorph = function(idx, newMorph) {
+      let monthData = appState.months[appState.activeMonth];
+      if (newMorph !== 'modules') {
+        let conflict = monthData.habits.some((h, i) => i !== idx && h.morph === newMorph);
+        if (conflict) {
+          alert("This morphological trait is already assigned to another habit!");
+          return;
+        }
+      }
+      monthData.habits[idx].morph = newMorph;
+      if (monthData.dnaStrand[idx]) {
+        monthData.dnaStrand[idx].morph = newMorph;
+      }
+      saveState();
+      renderHabitManager();
+    }
+
+    function renderDNAConstructor() {
+      let container = document.getElementById('dna-strand-builder');
+      if (!container) return;
+      let monthData = appState.months[appState.activeMonth];
+      
+      container.innerHTML = '';
+      monthData.dnaStrand.forEach((gene, idx) => {
+        let block = document.createElement('div');
+        block.className = 'nucleotide-block';
+        block.style.backgroundColor = gene.color;
+        block.style.color = '#000';
+        
+        let isYN = gene.habitType === 'yn';
+        if (isYN) {
+          block.innerText = (gene.value > 0 ? 'Y' : 'N');
+          block.title = `${gene.type} [${gene.morph}] (Status: ${gene.value > 0 ? 'YES' : 'NO'})`;
+        } else {
+          block.innerText = gene.type[0].toUpperCase();
+          block.title = `${gene.type} [${gene.morph}] (${gene.value}h / 8h max)`;
+        }
+        
+        block.onclick = () => {
+          playSound('sound1');
+          if (isYN) {
+            gene.value = gene.value > 0 ? 0 : 1;
+          } else {
+            gene.value = (gene.value % 8) + 1;
+          }
+          monthData.habits[idx].units = gene.value;
+          saveState();
+          renderHabitManager();
+        };
+        container.appendChild(block);
+      });
+    }
+
+    let previewAngle = 0;
+
+    function renderOrganism(ctx, x, y, angle, habits, isMoving) {
+      ctx.save();
+      ctx.translate(x, y);
+      if (angle !== undefined) ctx.rotate(angle);
+
+      let baseRadius = 6;
+      let flagellaList = [];
+      let shieldRadiusVal = 0;
+      let shieldColor = '#60a5fa';
+      let antennaCount = 0;
+      let antennaColor = '#fff';
+      let spikeDensity = 0;
+      let spikeColor = '#fff';
+      let wormModules = [];
+
+      habits.forEach(h => {
+        let effectiveUnits = h.type === 'yn' ? (h.units > 0 ? 6 : 1) : Math.min(h.units, 8);
+        if (effectiveUnits <= 0 && h.type !== 'yn') return;
+
+        if (h.morph === 'bodysize') {
+          baseRadius = 4 + (effectiveUnits * 0.9);
+        } else if (h.morph === 'flagella') {
+          flagellaList.push({ units: effectiveUnits, color: h.color });
+        } else if (h.morph === 'shield') {
+          shieldRadiusVal = baseRadius + 3 + (effectiveUnits * 1.2);
+          shieldColor = h.color;
+        } else if (h.morph === 'antennas') {
+          antennaCount = Math.floor(effectiveUnits * 0.7) + 2;
+          antennaColor = h.color;
+        } else if (h.morph === 'spikes') {
+          spikeDensity = effectiveUnits;
+          spikeColor = h.color;
+        } else if (h.morph === 'modules') {
+          for (let u = 0; u < effectiveUnits; u++) {
+            wormModules.push({ color: h.color, name: h.name });
+          }
+        }
+      });
+
+      if (shieldRadiusVal > 0) {
+        ctx.strokeStyle = shieldColor;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(0, 0, shieldRadiusVal, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      if (spikeDensity > 0) {
+        let numSpikes = 6 + Math.floor(spikeDensity * 1.5);
+        ctx.strokeStyle = spikeColor;
+        ctx.lineWidth = 1.5;
+        for (let s = 0; s < numSpikes; s++) {
+          let sAngle = (s / numSpikes) * Math.PI * 2;
+          let innerR = baseRadius;
+          let outerR = baseRadius + 3 + (spikeDensity * 0.6);
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(sAngle) * innerR, Math.sin(sAngle) * innerR);
+          ctx.lineTo(Math.cos(sAngle) * outerR, Math.sin(sAngle) * outerR);
+          ctx.stroke();
+        }
+      }
+
+      if (antennaCount > 0) {
+        ctx.strokeStyle = antennaColor;
+        ctx.lineWidth = 1;
+        for (let a = 0; a < antennaCount; a++) {
+          let aAngle = -Math.PI / 4 + (a / (antennaCount - 1 || 1)) * (Math.PI / 2);
+          let antLen = 8 + (antennaCount * 1.2);
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(aAngle) * baseRadius, Math.sin(aAngle) * baseRadius);
+          ctx.lineTo(Math.cos(aAngle) * (baseRadius + antLen), Math.sin(aAngle) * (baseRadius + antLen));
+          ctx.stroke();
+          
+          ctx.fillStyle = antennaColor;
+          ctx.beginPath();
+          ctx.arc(Math.cos(aAngle) * (baseRadius + antLen), Math.sin(aAngle) * (baseRadius + antLen), 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      let prevX = 0;
+      let prevY = 0;
+      let segRadius = baseRadius * 0.85;
+
+      if (wormModules.length > 0) {
+        wormModules.forEach((mod, mIdx) => {
+          let dist = segRadius * 1.6;
+          let angleOffset = (isMoving ? previewAngle : Date.now() * 0.005) - (mIdx * 0.4);
+          let segX = prevX - Math.cos(angleOffset) * dist;
+          let segY = prevY - Math.sin(angleOffset) * (dist * 0.4);
+
+          ctx.strokeStyle = mod.color;
+          ctx.lineWidth = segRadius * 1.8;
+          ctx.beginPath();
+          ctx.moveTo(prevX, prevY);
+          ctx.lineTo(segX, segY);
+          ctx.stroke();
+
+          ctx.fillStyle = mod.color;
+          ctx.beginPath();
+          ctx.arc(segX, segY, segRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          prevX = segX;
+          prevY = segY;
+        });
+      }
+
+      ctx.fillStyle = '#111';
+      ctx.beginPath();
+      ctx.arc(0, 0, baseRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      flagellaList.forEach((f, fIdx) => {
+        let tailLen = 8 + (f.units * 2.0);
+        ctx.strokeStyle = f.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        let tailBaseX = -baseRadius;
+        let tailBaseY = (fIdx * 4) - 2;
+        ctx.moveTo(tailBaseX, tailBaseY);
+        let animFactor = isMoving ? previewAngle : Date.now() * 0.01;
+        ctx.quadraticCurveTo(
+          tailBaseX - tailLen * 0.6, 
+          Math.sin(animFactor * 3 + fIdx) * (4 + f.units * 0.8), 
+          tailBaseX - tailLen, 
+          Math.cos(animFactor * 2 + fIdx) * 6
+        );
+        ctx.stroke();
+      });
+
+      ctx.restore();
+    }
+
+    function drawPreview3D() {
+      let cvs = document.getElementById('preview-canvas');
+      if (!cvs) return;
+      let ctx = cvs.getContext('2d');
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+      let monthData = appState.months[appState.activeMonth];
+      previewAngle += 0.03;
+      
+      ctx.save();
+      ctx.translate(cvs.width / 2, cvs.height / 2);
+      renderOrganism(ctx, 0, 0, 0, monthData.habits, true);
+      ctx.restore();
+    }
+
+    function initFolders() {
+      let grid = document.getElementById('folder-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      for (let i = 1; i <= 12; i++) {
+        let card = document.createElement('div');
+        card.className = 'folder-card';
+        card.innerHTML = `<b>0${i}_MTH</b><br><span style="font-size:10px; color:#aaa;">Pop: ${appState.months[i].population.length}</span>`;
+        card.onclick = () => {
+          playSound('sound1');
+          appState.activeMonth = i;
+          document.getElementById('active-month-label').innerText = i;
+          saveState();
+          renderHabitManager();
+        };
+        grid.appendChild(card);
+      }
+    }
+
+    function checkNonOverlapping(monthData, cx, cy, radius) {
+      let overlapPlant = monthData.plants.some(p => Math.hypot(p.x - cx, p.y - cy) < p.baseRadius + radius + 15);
+      let overlapStone = monthData.stones.some(s => Math.hypot(s.x - cx, s.y - cy) < s.baseRadius + radius + 15);
+      return !overlapPlant && !overlapStone;
+    }
+
+    function spawnNonOverlappingEntity(monthData, maxW, maxH, type, maxAttempts = 150) {
+      let attempts = 0;
+      while (attempts < maxAttempts) {
+        if (type === 'plant') {
+          let baseRadius = 35 + Math.random() * 20;
+          let cx = Math.random() * (maxW - 120) + 60;
+          let cy = Math.random() * (maxH - 120) + 60;
+          
+          if (checkNonOverlapping(monthData, cx, cy, baseRadius)) {
+            let targetPixels = [];
+            let seedOffset1 = Math.random() * 10;
+            let seedOffset2 = Math.random() * 10;
+            for (let dx = -baseRadius - 15; dx <= baseRadius + 15; dx += 3) {
+              for (let dy = -baseRadius - 15; dy <= baseRadius + 15; dy += 3) {
+                let dist = Math.hypot(dx, dy);
+                let angle = Math.atan2(dy, dx);
+                let jaggedRadius = baseRadius + Math.sin(angle * 5 + seedOffset1) * 8 + Math.cos(angle * 3 - seedOffset2) * 7;
+                if (dist <= jaggedRadius) {
+                  targetPixels.push({ offsetX: dx, offsetY: dy });
+                }
+              }
+            }
+            
+            targetPixels.sort(() => Math.random() - 0.5);
+            let activePixels = targetPixels.map(tp => ({ offsetX: tp.offsetX, offsetY: tp.offsetY, alive: false }));
+
+            monthData.plants.push({ 
+              x: cx, 
+              y: cy, 
+              pixels: activePixels, 
+              baseRadius: baseRadius, 
+              isRegenerating: true, 
+              regenerationTimer: 0 
+            });
+            return true;
+          }
+        } else if (type === 'stone') {
+          let baseRadius = 22 + Math.random() * 12;
+          let cx = Math.random() * (maxW - 100) + 50;
+          let cy = Math.random() * (maxH - 100) + 50;
+
+          if (checkNonOverlapping(monthData, cx, cy, baseRadius)) {
+            let pixels = [];
+            let seedOffset1 = Math.random() * 10;
+            let seedOffset2 = Math.random() * 10;
+            for (let dx = -baseRadius - 10; dx <= baseRadius + 10; dx += 3) {
+              for (let dy = -baseRadius - 10; dy <= baseRadius + 10; dy += 3) {
+                let dist = Math.hypot(dx, dy);
+                let angle = Math.atan2(dy, dx);
+                let jaggedRadius = baseRadius + Math.sin(angle * 4 + seedOffset1) * 6 + Math.cos(angle * 6 - seedOffset2) * 5;
+                if (dist <= jaggedRadius) {
+                  pixels.push({ offsetX: dx, offsetY: dy });
+                }
+              }
+            }
+            monthData.stones.push({ x: cx, y: cy, baseRadius: baseRadius, pixels: pixels });
+            return true;
+          }
+        }
+        attempts++;
+      }
+      return false;
+    }
+
+    window.spawnBacteria = function() {
+      let monthData = appState.months[appState.activeMonth];
+      if (!monthData.population) monthData.population = [];
+      if (!monthData.phylogenyTree) monthData.phylogenyTree = [];
+      if (!monthData.performanceHistory) monthData.performanceHistory = [];
+
+      let snapshotHabits = JSON.parse(JSON.stringify(monthData.habits));
+      let dominantHabit = snapshotHabits.reduce((max, h) => {
+        let valMax = max.type === 'yn' ? (max.units > 0 ? 8 : 0) : max.units;
+        let valH = h.type === 'yn' ? (h.units > 0 ? 8 : 0) : h.units;
+        return valH > valMax ? h : max;
+      }, snapshotHabits[0]);
+
+      if (!monthData.plants || monthData.plants.length === 0) {
+        monthData.plants = [];
+        for(let p = 0; p < 8; p++) {
+          spawnNonOverlappingEntity(monthData, 660, 260, 'plant');
+        }
+      }
+      if (!monthData.stones || monthData.stones.length === 0) {
+        monthData.stones = [];
+        for(let s = 0; s < 3; s++) {
+          spawnNonOverlappingEntity(monthData, 660, 260, 'stone');
+        }
+      }
+
+      let spawnX = Math.random() * 600 + 30;
+      let spawnY = Math.random() * 200 + 20;
+      let attempts = 0;
+      while (attempts < 20) {
+        let collides = monthData.stones.some(st => Math.hypot(st.x - spawnX, st.y - spawnY) < st.baseRadius + 15) ||
+                       monthData.plants.some(pl => Math.hypot(pl.x - spawnX, pl.y - spawnY) < pl.baseRadius + 15);
+        if (!collides) break;
+        spawnX = Math.random() * 600 + 30;
+        spawnY = Math.random() * 200 + 20;
+        attempts++;
+      }
+
+      let newOrg = {
+        id: Math.random().toString(36).substring(2, 7),
+        x: spawnX,
+        y: spawnY,
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: (Math.random() - 0.5) * 0.8,
+        angle: Math.random() * Math.PI * 2,
+        wellbeing: 100,
+        habitsSnapshot: snapshotHabits,
+        dna: JSON.parse(JSON.stringify(monthData.dnaStrand)),
+        generation: monthData.population.length + 1,
+        speciesName: `${dominantHabit ? dominantHabit.name : 'Custom'} Morph (Gen ${monthData.population.length + 1})`
+      };
+
+      monthData.population.push(newOrg);
+      monthData.phylogenyTree.push({ 
+        gen: newOrg.generation, 
+        name: newOrg.speciesName,
+        color: newOrg.dna[0]?.color || '#fff'
+      });
+
+      monthData.performanceHistory.push({
+        timestamp: 'Day ' + (monthData.performanceHistory.length + 1),
+        habits: snapshotHabits
+      });
+
+      if (!monthData.genePoolHistory) monthData.genePoolHistory = [];
+      let diversityScore = monthData.habits.reduce((acc, h) => acc + (h.type === 'yn' ? (h.units > 0 ? 1 : 0) : h.units), 0);
+      monthData.genePoolHistory.push(diversityScore);
+
+      saveState();
+      initFolders();
+    }
+
+    let isMouseDown = false;
+    let mousePos = { x: 0, y: 0 };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      let cvs = document.getElementById('simulation-canvas');
+      if (cvs) {
+        cvs.addEventListener('mousedown', (e) => {
+          isMouseDown = true;
+          updateMousePos(e, cvs);
+        });
+        window.addEventListener('mouseup', () => { isMouseDown = false; });
+        cvs.addEventListener('mousemove', (e) => {
+          if (isMouseDown) updateMousePos(e, cvs);
+        });
+      }
+    });
+
+    function updateMousePos(e, cvs) {
+      let rect = cvs.getBoundingClientRect();
+      mousePos.x = e.clientX - rect.left;
+      mousePos.y = e.clientY - rect.top;
+    }
+
+    function renderGenePoolGraph(monthData) {
+      let gCvs = document.getElementById('gene-pool-graph');
+      if (!gCvs) return;
+      let ctx = gCvs.getContext('2d');
+      ctx.clearRect(0, 0, gCvs.width, gCvs.height);
+
+      let history = monthData.genePoolHistory || [];
+      if (history.length === 0) return;
+
+      ctx.strokeStyle = '#a3e635';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+
+      let maxLen = Math.max(history.length, 6);
+      let w = gCvs.width - 10;
+      let h = gCvs.height - 10;
+
+      history.forEach((val, idx) => {
+        let px = 5 + (idx * (w / maxLen));
+        let py = (gCvs.height - 5) - (val / 30) * h;
+        if (py < 5) py = 5;
+
+        if (idx === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+
+        ctx.fillStyle = '#a3e635';
+        ctx.fillRect(px - 1, py - 1, 2, 2);
+      });
+      ctx.stroke();
+    }
+
+    function runSimulationLoop(dt) {
+      let cvs = document.getElementById('simulation-canvas');
+      if (!cvs) return;
+      let ctx = cvs.getContext('2d');
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+      let monthData = appState.months[appState.activeMonth];
+      if (!monthData) return;
+
+      if (!monthData.deadSpots) monthData.deadSpots = [];
+      if (!monthData.floatingFood) monthData.floatingFood = [];
+      if (!monthData.hearts) monthData.hearts = [];
+      if (!monthData.plantParticles) monthData.plantParticles = [];
+      if (monthData.islandsEatenCount === undefined) monthData.islandsEatenCount = 0;
+      if (!monthData.genePoolHistory) monthData.genePoolHistory = [];
+      
+      if (!monthData.plants || monthData.plants.length === 0) {
+        monthData.plants = [];
+        for(let p = 0; p < 8; p++) {
+          spawnNonOverlappingEntity(monthData, cvs.width, cvs.height, 'plant');
+        }
+      }
+      if (!monthData.stones || monthData.stones.length === 0) {
+        monthData.stones = [];
+        for(let s = 0; s < 3; s++) {
+          spawnNonOverlappingEntity(monthData, cvs.width, cvs.height, 'stone');
+        }
+      }
+
+      if (isMouseDown) {
+        if (Math.random() < 0.6) {
+          let fx = Math.max(10, Math.min(cvs.width - 10, mousePos.x + (Math.random() - 0.5) * 16));
+          let fy = Math.max(10, Math.min(cvs.height - 10, mousePos.y + (Math.random() - 0.5) * 16));
+          monthData.floatingFood.push({
+            x: fx,
+            y: fy,
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: (Math.random() - 0.5) * 1.5
+          });
+        }
+      }
+
+      monthData.deadSpots.forEach(ds => {
+        ctx.fillStyle = '#262626';
+        ctx.beginPath();
+        ctx.arc(ds.x, ds.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#404040';
+        ctx.stroke();
+      });
+
+      monthData.floatingFood.forEach((food) => {
+        food.x += food.vx;
+        food.y += food.vy;
+
+        if (food.x < 5 || food.x > cvs.width - 5) food.vx *= -1;
+        if (food.y < 5 || food.y > cvs.height - 5) food.vy *= -1;
+
+        monthData.stones.forEach(stone => {
+          let distToStone = Math.hypot(food.x - stone.x, food.y - stone.y);
+          if (distToStone < stone.baseRadius + 2) {
+            let angle = Math.atan2(food.y - stone.y, food.x - stone.x);
+            food.x = stone.x + Math.cos(angle) * (stone.baseRadius + 3);
+            food.y = stone.y + Math.sin(angle) * (stone.baseRadius + 3);
+            food.vx *= -1;
+            food.vy *= -1;
+          }
+        });
+        
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(food.x - 2, food.y - 2, 4, 4);
+      });
+
+      monthData.stones.forEach(stone => {
+        stone.pixels.forEach(px => {
+          ctx.fillStyle = '#525252';
+          ctx.fillRect(stone.x + px.offsetX - 1.5, stone.y + px.offsetY - 1.5, 3, 3);
+        });
+      });
+
+      monthData.plants.forEach((island, iIdx) => {
+        if (island.isRegenerating) {
+          island.regenerationTimer += dt;
+          let totalPixels = island.pixels.length;
+          let activateCount = Math.floor((island.regenerationTimer / 5.0) * totalPixels);
+          for (let p = 0; p < island.pixels.length; p++) {
+            if (p < activateCount) {
+              island.pixels[p].alive = true;
+            }
+          }
+          if (island.regenerationTimer >= 5.0) {
+            island.isRegenerating = false;
+          }
+        }
+
+        let aliveCount = 0;
+        island.pixels.forEach(px => {
+          if (px.alive) {
+            aliveCount++;
+            ctx.fillStyle = '#34d399';
+            ctx.fillRect(island.x + px.offsetX - 1.5, island.y + px.offsetY - 1.5, 3, 3);
+          }
+        });
+
+        if (aliveCount === 0 && !island.isRegenerating) {
+          monthData.islandsEatenCount++;
+          spawnNonOverlappingEntity(monthData, cvs.width, cvs.height, 'plant');
+          monthData.plants.splice(iIdx, 1);
+        }
+      });
+
+      monthData.plantParticles.forEach((pt, pIdx) => {
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.alpha -= 0.04;
+        if (pt.alpha <= 0) {
+          monthData.plantParticles.splice(pIdx, 1);
+          return;
+        }
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, pt.alpha);
+        ctx.fillStyle = '#6ee7b7';
+        ctx.fillRect(pt.x, pt.y, 2, 2);
+        ctx.restore();
+      });
+
+      monthData.hearts.forEach((h, hIdx) => {
+        h.y -= 0.6;
+        h.alpha -= 0.02;
+        if (h.alpha <= 0) {
+          monthData.hearts.splice(hIdx, 1);
+          return;
+        }
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, h.alpha);
+        ctx.fillStyle = '#f87171';
+        let hx = h.x, hy = h.y;
+        ctx.fillRect(hx, hy, 2, 2);
+        ctx.fillRect(hx + 4, hy, 2, 2);
+        ctx.fillRect(hx - 2, hy + 2, 8, 2);
+        ctx.fillRect(hx, hy + 4, 4, 2);
+        ctx.fillRect(hx + 1, hy + 6, 2, 2);
+        ctx.restore();
+      });
+
+      let totalWellbeingSum = 0;
+
+      if (monthData.population && monthData.population.length > 0) {
+        for (let i = monthData.population.length - 1; i >= 0; i--) {
+          let org = monthData.population[i];
+
+          org.wellbeing -= (4 / 3600) * (1/30) * 100;
+          if (org.wellbeing < 0) org.wellbeing = 0;
+
+          if (org.wellbeing <= 0) {
+            monthData.deadSpots.push({ x: org.x, y: org.y });
+            monthData.population.splice(i, 1);
+            continue;
+          }
+
+          totalWellbeingSum += org.wellbeing;
+
+          let flagellaObj = org.habitsSnapshot.find(h => h.morph === 'flagella');
+          let fUnits = flagellaObj ? (flagellaObj.type === 'yn' ? (flagellaObj.units > 0 ? 6 : 1) : Math.min(flagellaObj.units, 8)) : 2;
+          
+          let wellbeingSpeedFactor = org.wellbeing / 100;
+          let baseSpeed = (0.3 + (fUnits * 0.08)) * wellbeingSpeedFactor;
+
+          let targetX = null;
+          let targetY = null;
+          let minDist = 9999;
+
+          monthData.floatingFood.forEach(food => {
+            let d = Math.hypot(org.x - food.x, org.y - food.y);
+            if (d < minDist) {
+              minDist = d;
+              targetX = food.x;
+              targetY = food.y;
+            }
+          });
+
+          let currentSpeed = baseSpeed;
+          let desiredAngle = org.angle;
+
+          if (targetX !== null && targetY !== null) {
+            currentSpeed *= 2.2;
+            desiredAngle = Math.atan2(targetY - org.y, targetX - org.x);
+          } else {
+            desiredAngle += (Math.random() - 0.5) * 0.4;
+          }
+
+          let rayAngles = [0, -0.5, 0.5, -1.0, 1.0];
+          let chosenAngle = desiredAngle;
+
+          for (let rAngle of rayAngles) {
+            let testAngle = desiredAngle + rAngle;
+            let rayDist = 28;
+            let testX = org.x + Math.cos(testAngle) * rayDist;
+            let testY = org.y + Math.sin(testAngle) * rayDist;
+
+            let hitStone = monthData.stones.some(st => Math.hypot(st.x - testX, st.y - testY) < st.baseRadius + 12);
+            if (!hitStone) {
+              chosenAngle = testAngle;
+              break;
+            }
+          }
+
+          org.angle = chosenAngle + (Math.random() - 0.5) * 0.05;
+          org.vx = Math.cos(org.angle) * currentSpeed;
+          org.vy = Math.sin(org.angle) * currentSpeed;
+
+          let nextX = org.x + org.vx;
+          let nextY = org.y + org.vy;
+
+          let collidesWithStone = monthData.stones.some(st => Math.hypot(st.x - nextX, st.y - nextY) < st.baseRadius + 6);
+          if (collidesWithStone) {
+            org.angle += Math.PI * 0.5;
+            org.vx = Math.cos(org.angle) * currentSpeed;
+            org.vy = Math.sin(org.angle) * currentSpeed;
+            nextX = org.x + org.vx;
+            nextY = org.y + org.vy;
+          }
+
+          org.x = nextX;
+          org.y = nextY;
+
+          let margin = 15;
+          if (org.x < margin) { org.x = margin; org.angle = Math.PI - org.angle; }
+          if (org.x > cvs.width - margin) { org.x = cvs.width - margin; org.angle = Math.PI - org.angle; }
+          if (org.y < margin) { org.y = margin; org.angle = -org.angle; }
+          if (org.y > cvs.height - margin) { org.y = cvs.height - margin; org.angle = -org.angle; }
+
+          monthData.floatingFood.forEach((food, fIdx) => {
+            if (Math.hypot(org.x - food.x, org.y - food.y) < 12) {
+              monthData.floatingFood.splice(fIdx, 1);
+              org.wellbeing = Math.min(100, org.wellbeing + 3); 
+              monthData.hearts.push({ x: org.x, y: org.y - 10, alpha: 1.0 });
+            }
+          });
+
+          monthData.plants.forEach(island => {
+            if (island.isRegenerating) return;
+            island.pixels.forEach(px => {
+              if (px.alive) {
+                let pxWorldX = island.x + px.offsetX;
+                let pxWorldY = island.y + px.offsetY;
+                if (Math.hypot(org.x - pxWorldX, org.y - pxWorldY) < 11) {
+                  if (Math.random() < 0.2) {
+                    px.alive = false;
+                    playChewClickSound();
+                    monthData.plantParticles.push({
+                      x: pxWorldX,
+                      y: pxWorldY,
+                      vx: (Math.random() - 0.5) * 2.2,
+                      vy: (Math.random() - 0.5) * 2.2 - 0.5,
+                      alpha: 1.0
+                    });
+                  }
+                }
+              }
+            });
+          });
+
+          renderOrganism(ctx, org.x, org.y, org.angle, org.habitsSnapshot, true);
+        }
+
+        let popCount = monthData.population.length;
+        document.getElementById('stat-pop').innerText = popCount;
+        document.getElementById('stat-islands-eaten').innerText = monthData.islandsEatenCount;
+        renderGenePoolGraph(monthData);
+
+        let avgWellbeing = popCount > 0 ? Math.round(totalWellbeingSum / popCount) : 0;
+        let wbLabel = document.getElementById('stat-wellbeing');
+        wbLabel.innerText = avgWellbeing + '%';
+        wbLabel.style.color = avgWellbeing > 50 ? '#a3e635' : (avgWellbeing > 20 ? '#fbbf24' : '#f87171');
+
+        let dominant = monthData.habits.reduce((max, h) => {
+          let valMax = max.type === 'yn' ? (max.units > 0 ? 8 : 0) : max.units;
+          let valH = h.type === 'yn' ? (h.units > 0 ? 8 : 0) : h.units;
+          return valH > valMax ? h : max;
+        }, monthData.habits[0]);
+        document.getElementById('stat-gene').innerText = dominant ? `${dominant.name} (${dominant.morph})` : 'None';
+      } else {
+        document.getElementById('stat-pop').innerText = '0';
+        document.getElementById('stat-wellbeing').innerText = '0%';
+        document.getElementById('stat-gene').innerText = 'None';
+        document.getElementById('stat-islands-eaten').innerText = monthData.islandsEatenCount || 0;
+        renderGenePoolGraph(monthData);
+      }
+    }
+
+    window.toggleAnalytics = function(show) {
+      let modal = document.getElementById('analytics-modal');
+      if (!modal) return;
+      modal.style.display = show ? 'flex' : 'none';
+      if (show) {
+        setTimeout(() => renderAnalyticsCharts(), 50);
+      }
+    }
+
+    function renderAnalyticsCharts() {
+      let monthData = appState.months[appState.activeMonth];
+      
+      let treeCvs = document.getElementById('phylogeny-canvas');
+      let tCtx = treeCvs.getContext('2d');
+      tCtx.clearRect(0, 0, treeCvs.width, treeCvs.height);
+      tCtx.fillStyle = '#fff';
+      tCtx.font = '11px Courier New';
+
+      let startY = 30;
+      if (monthData.phylogenyTree) {
+        monthData.phylogenyTree.forEach((node, i) => {
+          let yPos = startY + (i * 26);
+          if (yPos > treeCvs.height - 20) return;
+          
+          tCtx.strokeStyle = node.color;
+          tCtx.beginPath();
+          tCtx.moveTo(10, yPos);
+          tCtx.lineTo(35, yPos);
+          tCtx.stroke();
+          
+          tCtx.fillStyle = node.color;
+          tCtx.fillRect(35, yPos - 4, 8, 8);
+          
+          tCtx.fillStyle = '#fff';
+          tCtx.fillText(`Gen #${node.gen}: ${node.name}`, 48, yPos + 4);
+        });
+      }
+
+      let heatContainer = document.getElementById('heatmap-container');
+      heatContainer.innerHTML = '';
+      let history = monthData.performanceHistory || [];
+      let reportBox = document.getElementById('progression-report-box');
+      reportBox.innerHTML = '';
+      let tooltip = document.getElementById('matrix-tooltip');
+
+      if (history.length === 0) {
+        heatContainer.innerHTML = '<div style="color:#888; font-size:12px; padding:10px;">No spawn history recorded yet.</div>';
+        reportBox.innerHTML = '<div style="font-size:14px; color:#aaa; width:100%;"><i>No data recorded for current month cycle.</i></div>';
+        return;
+      }
+
+      let totalScoreAcrossAll = 0;
+      history.forEach(entry => {
+        entry.habits.forEach(h => { 
+          totalScoreAcrossAll += (h.type === 'yn' ? (h.units > 0 ? 1 : 0) : Math.min(h.units, 8)); 
+        });
+      });
+
+      let pieSlices = [];
+      let cumulativeAngle = 0;
+
+      monthData.habits.forEach((habit) => {
+        let rowWrapper = document.createElement('div');
+        rowWrapper.style.marginBottom = '8px';
+        
+        rowWrapper.innerHTML = `<div style="font-size:11px; color:${habit.color || '#fff'}; margin-bottom:3px;">${habit.name}</div>`;
+
+        let gridDiv = document.createElement('div');
+        gridDiv.style.display = 'flex';
+        gridDiv.style.flexWrap = 'wrap';
+        gridDiv.style.gap = '4px';
+
+        let categoryVals = history.map(entry => {
+          let m = entry.habits.find(h => h.name === habit.name);
+          if (!m) return 0;
+          return m.type === 'yn' ? (m.units > 0 ? 1 : 0) : Math.min(m.units, 8);
+        });
+
+        history.forEach((entry, eIdx) => {
+          let val = categoryVals[eIdx];
+          let intensity = habit.type === 'yn' ? (val > 0 ? 1.0 : 0.15) : Math.max(0.2, val / 8);
+
+          let square = document.createElement('div');
+          square.style.width = '24px';
+          square.style.height = '20px';
+          square.style.backgroundColor = habit.color;
+          square.style.opacity = intensity;
+          square.style.border = '1px solid #fff';
+          square.style.display = 'flex';
+          square.style.alignItems = 'center';
+          square.style.justifyContent = 'center';
+          square.style.fontSize = '8px';
+          square.style.color = '#fff';
+          square.style.cursor = 'pointer';
+          square.innerText = `${eIdx + 1}`;
+
+          square.onmousemove = (ev) => {
+            let breakdownLines = entry.habits.map(h => {
+              let isYesNo = h.type === 'yn';
+              let displayVal = isYesNo ? (h.units > 0 ? 'YES' : 'NO') : `${Math.min(h.units, 8)}h`;
+              let pctBar = isYesNo ? (h.units > 0 ? 100 : 10) : Math.round((Math.min(h.units, 8) / 8) * 100);
+              return `
+              <div style="margin-bottom:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="color:${h.color}; display:flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; background:${h.color}; display:inline-block;"></span>${h.name}:</span> 
+                  <b style="color:#fff;">${displayVal}</b>
+                </div>
+                <div style="width:100%; background:#222; height:4px; margin-top:2px; border:1px solid #444;">
+                  <div style="width:${pctBar}%; background:${h.color}; height:100%;"></div>
+                </div>
+              </div>`;
+            }).join('');
+
+            tooltip.style.display = 'block';
+            tooltip.style.left = (ev.clientX + 15) + 'px';
+            tooltip.style.top = (ev.clientY - 40) + 'px';
+            tooltip.innerHTML = `<b style="color:#a3e635; border-bottom:1px solid #444; display:block; padding-bottom:3px; margin-bottom:6px;">Day ${eIdx + 1} Log</b>${breakdownLines}`;
+          };
+          square.onmouseleave = () => tooltip.style.display = 'none';
+          gridDiv.appendChild(square);
+        });
+
+        rowWrapper.appendChild(gridDiv);
+        heatContainer.appendChild(rowWrapper);
+      });
+
+      let circleCol = document.createElement('div');
+      circleCol.className = 'compact-stat-card';
+      circleCol.style.maxWidth = '180px';
+      circleCol.innerHTML = `
+        <div style="font-size: 13px; font-weight: bold; color: #fff; text-align: center; border-bottom: 1px dashed #555; padding-bottom: 6px; margin-bottom: 6px;">TRAIT RATIO</div>
+        <div style="display: flex; justify-content: center;">
+          <canvas id="circle-graph-canvas" width="100" height="100"></canvas>
+        </div>
+        <div id="circle-legend" style="font-size: 10px; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; align-items: center;"></div>
+      `;
+      reportBox.appendChild(circleCol);
+
+      monthData.habits.forEach((habit, idx) => {
+        let categoryVals = history.map(entry => {
+          let m = entry.habits.find(h => h.name === habit.name);
+          if (!m) return 0;
+          return m.type === 'yn' ? (m.units > 0 ? 1 : 0) : Math.min(m.units, 8);
+        });
+
+        let latestVal = categoryVals[categoryVals.length - 1] || 0;
+        let firstVal = categoryVals[0] || latestVal;
+        let diffSinceBeginning = firstVal > 0 ? Math.round(((latestVal - firstVal) / firstVal) * 100) : 0;
+
+        let weekAgoIdx = Math.max(0, categoryVals.length - 7);
+        let weekAgoVal = categoryVals[weekAgoIdx];
+        let diffLastWeek = weekAgoVal > 0 ? Math.round(((latestVal - weekAgoVal) / weekAgoVal) * 100) : 0;
+
+        let habitTotalScore = categoryVals.reduce((a, b) => a + b, 0);
+        let ratioPct = totalScoreAcrossAll > 0 ? Math.round((habitTotalScore / totalScoreAcrossAll) * 100) : 0;
+
+        if (ratioPct > 0) {
+          pieSlices.push({
+            name: habit.name, color: habit.color, ratio: ratioPct,
+            startAngle: cumulativeAngle, endAngle: cumulativeAngle + (ratioPct / 100) * (Math.PI * 2)
+          });
+          cumulativeAngle += (ratioPct / 100) * (Math.PI * 2);
+        }
+
+        let formatDelta = (val) => {
+          let cls = val >= 0 ? 'stat-pos' : 'stat-neg';
+          let sign = val >= 0 ? '+' : '';
+          return `<span class="${cls}">${sign}${val}%</span>`;
+        };
+
+        let displayMeanOrRate = habit.type === 'yn' ? `Rate: <b>${Math.round((habitTotalScore / (history.length || 1)) * 100)}%</b>` : `Mean: <b>${(habitTotalScore / history.length).toFixed(1)}h</b>`;
+
+        let traitCol = document.createElement('div');
+        traitCol.className = 'compact-stat-card';
+        traitCol.innerHTML = `
+          <div>
+            <div style="font-size: 14px; font-weight: bold; color: ${habit.color}; text-align: center; border-bottom: 1px dashed #555; padding-bottom: 6px;">${habit.name}</div>
+            <div class="metrics-list">
+              <div>Beg: ${formatDelta(diffSinceBeginning)}</div>
+              <div>Wk: ${formatDelta(diffLastWeek)}</div>
+              <div>${displayMeanOrRate} (${ratioPct}%)</div>
+            </div>
+          </div>
+          <div style="margin-top: auto;">
+            <canvas class="mini-trait-line" id="mini-line-${idx}" width="180" height="50" style="width: 100%; height: 50px; border: 1px solid #333; background: #000; display: block;"></canvas>
+          </div>
+        `;
+        reportBox.appendChild(traitCol);
+      });
+
+      setTimeout(() => {
+        let circleCvs = document.getElementById('circle-graph-canvas');
+        if (circleCvs) {
+          let cCtx = circleCvs.getContext('2d');
+          let centerX = circleCvs.width / 2;
+          let centerY = circleCvs.height / 2;
+          let radius = 40;
+
+          cCtx.clearRect(0, 0, circleCvs.width, circleCvs.height);
+          if (pieSlices.length === 0) {
+            cCtx.fillStyle = '#444';
+            cCtx.beginPath();
+            cCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            cCtx.fill();
+          } else {
+            pieSlices.forEach(slice => {
+              cCtx.fillStyle = slice.color;
+              cCtx.beginPath();
+              cCtx.moveTo(centerX, centerY);
+              cCtx.arc(centerX, centerY, radius, slice.startAngle, slice.endAngle);
+              cCtx.closePath();
+              cCtx.fill();
+              cCtx.strokeStyle = '#000';
+              cCtx.lineWidth = 1;
+              cCtx.stroke();
+            });
+          }
+
+          let legendDiv = document.getElementById('circle-legend');
+          legendDiv.innerHTML = monthData.habits.map(h => {
+            let hSum = history.reduce((acc, entry) => {
+              let m = entry.habits.find(item => item.name === h.name);
+              if (!m) return acc;
+              return acc + (m.type === 'yn' ? (m.units > 0 ? 1 : 0) : Math.min(m.units, 8));
+            }, 0);
+            let pct = totalScoreAcrossAll > 0 ? Math.round((hSum / totalScoreAcrossAll) * 100) : 0;
+            return `<div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; background: ${h.color}; border: 1px solid #fff;"></div><span><b>${h.name}</b>: ${pct}%</span></div>`;
+          }).join('');
+        }
+
+        monthData.habits.forEach((habit, idx) => {
+          let mCvs = document.getElementById(`mini-line-${idx}`);
+          if (!mCvs) return;
+          let lCtx = mCvs.getContext('2d');
+          lCtx.clearRect(0, 0, mCvs.width, mCvs.height);
+
+          let categoryVals = history.map(entry => {
+            let m = entry.habits.find(h => h.name === habit.name);
+            if (!m) return 0;
+            return m.type === 'yn' ? (m.units > 0 ? 1 : 0) : Math.min(m.units, 8);
+          });
+
+          if (categoryVals.length > 0) {
+            lCtx.strokeStyle = habit.color;
+            lCtx.lineWidth = 2;
+            lCtx.beginPath();
+
+            let maxDayCount = Math.max(history.length, 5);
+            let chartWidth = mCvs.width - 10;
+            let chartHeight = mCvs.height - 10;
+            let maxValLimit = habit.type === 'yn' ? 1 : 8;
+
+            history.forEach((entry, eIdx) => {
+              let val = categoryVals[eIdx];
+              let px = 5 + (eIdx * (chartWidth / maxDayCount));
+              let py = (mCvs.height - 5) - (val / maxValLimit) * chartHeight;
+
+              if (eIdx === 0) lCtx.moveTo(px, py);
+              else lCtx.lineTo(px, py);
+              
+              lCtx.fillStyle = habit.color;
+              lCtx.fillRect(px - 1.5, py - 1.5, 3, 3);
+            });
+            lCtx.stroke();
+          }
+        });
+
+        let trendCvs = document.getElementById('trend-canvas');
+        let parentContainer = trendCvs.parentElement;
+        trendCvs.width = parentContainer.clientWidth > 400 ? parentContainer.clientWidth - 20 : 750;
+        let tCtx2 = trendCvs.getContext('2d');
+        tCtx2.clearRect(0, 0, trendCvs.width, trendCvs.height);
+
+        tCtx2.strokeStyle = '#555';
+        tCtx2.lineWidth = 1;
+        tCtx2.beginPath();
+        tCtx2.moveTo(40, 15);
+        tCtx2.lineTo(40, trendCvs.height - 30);
+        tCtx2.lineTo(trendCvs.width - 15, trendCvs.height - 30);
+        tCtx2.stroke();
+
+        tCtx2.fillStyle = '#888';
+        tCtx2.font = '10px Courier New';
+        tCtx2.fillText("Intensity / Status", 40, 10);
+        tCtx2.fillText("Days (X-Axis)", trendCvs.width - 85, trendCvs.height - 12);
+
+        let maxDayCountMain = Math.max(history.length, 10);
+        let chartWidthMain = trendCvs.width - 65;
+        let chartHeightMain = trendCvs.height - 50;
+
+        monthData.habits.forEach((habit) => {
+          if (history.length > 0) {
+            tCtx2.strokeStyle = habit.color;
+            tCtx2.lineWidth = 2;
+            tCtx2.beginPath();
+
+            let maxValLimit = habit.type === 'yn' ? 1 : 8;
+
+            history.forEach((entry, eIdx) => {
+              let matchedHabit = entry.habits.find(h => h.name === habit.name);
+              let val = matchedHabit ? (matchedHabit.type === 'yn' ? (matchedHabit.units > 0 ? 1 : 0) : Math.min(matchedHabit.units, 8)) : 0;
+              let px = 50 + (eIdx * (chartWidthMain / maxDayCountMain));
+              let py = (trendCvs.height - 30) - (val / maxValLimit) * chartHeightMain;
+
+              if (eIdx === 0) tCtx2.moveTo(px, py);
+              else tCtx2.lineTo(px, py);
+
+              tCtx2.fillStyle = habit.color;
+              tCtx2.fillRect(px - 3, py - 3, 6, 6);
+            });
+            tCtx2.stroke();
+          }
+        });
+
+        trendCvs.onmousemove = (ev) => {
+          let rect = trendCvs.getBoundingClientRect();
+          let mouseX = ev.clientX - rect.left;
+          let dayWidth = chartWidthMain / maxDayCountMain;
+          let estimatedDayIdx = Math.round((mouseX - 50) / dayWidth);
+
+          if (estimatedDayIdx >= 0 && estimatedDayIdx < history.length) {
+            let entry = history[estimatedDayIdx];
+            let breakdownLines = entry.habits.map(h => {
+              let isYesNo = h.type === 'yn';
+              let displayVal = isYesNo ? (h.units > 0 ? 'YES' : 'NO') : `${Math.min(h.units, 8)}h`;
+              let pctBar = isYesNo ? (h.units > 0 ? 100 : 10) : Math.round((Math.min(h.units, 8) / 8) * 100);
+              return `
+              <div style="margin-bottom:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="color:${h.color}; display:flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; background:${h.color}; display:inline-block;"></span>${h.name}:</span> 
+                  <b style="color:#fff;">${displayVal}</b>
+                </div>
+                <div style="width:100%; background:#222; height:4px; margin-top:2px; border:1px solid #444;">
+                  <div style="width:${pctBar}%; background:${h.color}; height:100%;"></div>
+                </div>
+              </div>`;
+            }).join('');
+
+            tooltip.style.display = 'block';
+            tooltip.style.left = (ev.clientX + 15) + 'px';
+            tooltip.style.top = (ev.clientY - 45) + 'px';
+            tooltip.innerHTML = `<b style="color:#a3e635; border-bottom:1px solid #444; display:block; padding-bottom:3px; margin-bottom:6px;">Day ${estimatedDayIdx + 1} Log</b>${breakdownLines}`;
+          } else {
+            tooltip.style.display = 'none';
+          }
+        };
+        trendCvs.onmouseleave = () => tooltip.style.display = 'none';
+
+      }, 50);
+    }
+
+    window.resetEntireTracker = function() {
+      if (confirm("Are you sure you want to wipe all data and start fresh?")) {
+        localStorage.removeItem(STORAGE_KEY);
+        appState = getDefaultState();
+        saveState();
+        location.reload();
+      }
+    }
+
+    window.onload = () => {
+      initFolders();
+      renderHabitManager();
+      setInterval(() => drawPreview3D(), 50);
+      
+      const simulationIntervalMs = 1000 / 60;
+      let lastSimTime = Date.now();
+
+      setInterval(() => {
+        let now = Date.now();
+        let dt = (now - lastSimTime) / 1000;
+        if (dt > 0.1) dt = 0.1;
+        lastSimTime = now;
+
+        runSimulationLoop(dt);
+      }, simulationIntervalMs);
+
+      function renderLoop() {
+        if (!document.hidden) {
+          // Frame updates handled smoothly
+        }
+        requestAnimationFrame(renderLoop);
+      }
+      requestAnimationFrame(renderLoop);
+    };
+  </script>
+</body>
+</html>
