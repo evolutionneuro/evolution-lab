@@ -2,7 +2,91 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>CHRONO-DNA // Personal Evolution Lab + Audio Files</title>
+  <title>CHRONO-DNA // Personal Evolution Lab + Audio Files + Firebase Auth & Leaderboard</title>
+  
+  <!-- FIREBASE SDKs (v10 Modular) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getAuth, 
+      GoogleAuthProvider, 
+      signInWithPopup, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc, 
+      getDoc, 
+      collection, 
+      query, 
+      orderBy, 
+      limit, 
+      getDocs, 
+      serverTimestamp 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // TODO: Replace with your actual Firebase project configuration credentials
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const googleProvider = new GoogleAuthProvider();
+
+    // Expose Firebase tools globally for UI handlers
+    window.FB_AUTH = auth;
+    window.FB_DB = db;
+    window.FB_GoogleProvider = googleProvider;
+    window.FB_signInWithPopup = signInWithPopup;
+    window.FB_signOut = signOut;
+    window.FB_doc = doc;
+    window.FB_setDoc = setDoc;
+    window.FB_getDoc = getDoc;
+    window.FB_collection = collection;
+    window.FB_query = query;
+    window.FB_orderBy = orderBy;
+    window.FB_limit = limit;
+    window.FB_getDocs = getDocs;
+    window.FB_serverTimestamp = serverTimestamp;
+
+    // Listen to Auth State Changes
+    onAuthStateChanged(auth, async (user) => {
+      const authStatusSpan = document.getElementById('auth-status-text');
+      const loginBtn = document.getElementById('login-btn');
+      const logoutBtn = document.getElementById('logout-btn');
+      const cloudSyncBtn = document.getElementById('cloud-sync-btn');
+      const leaderboardBtn = document.getElementById('leaderboard-btn');
+
+      if (user) {
+        window.currentFirebaseUser = user;
+        if (authStatusSpan) authStatusSpan.innerText = `LOGGED IN: ${user.displayName || user.email}`;
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'inline-block';
+        if (cloudSyncBtn) cloudSyncBtn.style.display = 'inline-block';
+        if (leaderboardBtn) leaderboardBtn.style.display = 'inline-block';
+        
+        // Auto-load data from Firestore upon login
+        await loadUserDataFromCloud();
+      } else {
+        window.currentFirebaseUser = null;
+        if (authStatusSpan) authStatusSpan.innerText = 'STATUS: GUEST (LOCAL ONLY)';
+        if (loginBtn) loginBtn.style.display = 'inline-block';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+        if (cloudSyncBtn) cloudSyncBtn.style.display = 'none';
+      }
+    });
+  </script>
+
   <style>
     body {
       background-color: #020202;
@@ -195,6 +279,22 @@
       margin-top: 8px;
       margin-bottom: 8px;
     }
+    /* LEADERBOARD TABLE STYLING */
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    .leaderboard-table th, .leaderboard-table td {
+      border: 1px solid #444;
+      padding: 8px;
+      text-align: left;
+    }
+    .leaderboard-table th {
+      background: #111;
+      color: #a3e635;
+    }
   </style>
 </head>
 <body>
@@ -207,12 +307,44 @@
   <!-- HIDDEN FILE INPUT FOR JSON RESTORE -->
   <input type="file" id="import-file-input" style="display: none;" accept=".json" onchange="importJSONBackup(event)">
 
+  <!-- LEADERBOARD MODAL -->
+  <div id="leaderboard-modal" class="retro-modal">
+    <h3>PUBLIC EVOLUTIONARY LEADERBOARD</h3>
+    <div style="flex: 1; overflow-y: auto; margin-top: 10px;">
+      <p style="font-size: 11px; color: #aaa;">Compare top ecosystem populations and islands consumed across all researchers worldwide.</p>
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Researcher</th>
+            <th>Total Population</th>
+            <th>Islands Eaten</th>
+            <th>Last Updated</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-tbody">
+          <tr><td colspan="5" style="text-align:center; color:#777;">Loading leaderboard ranks...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top: 10px; border-top: 1px dashed #555; padding-top: 8px; display: flex; justify-content: flex-end;">
+      <button onclick="playSound('sound3'); toggleLeaderboard(false)" style="padding:6px 14px;">CLOSE LEADERBOARD</button>
+    </div>
+  </div>
+
   <div class="retro-window">
     <div class="window-header">
-      <span>SYSTEM://CHRONO_EVOLUTION_LAB.EXE [BACKUP-ENABLED V22]</span>
-      <div style="display: flex; gap: 6px; align-items: center;">
-        <button onclick="exportJSONBackup()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#a3e635; border:1px solid #a3e635;">[ EXPORT JSON BACKUP ]</button>
-        <button onclick="document.getElementById('import-file-input').click()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#60a5fa; border:1px solid #60a5fa;">[ IMPORT JSON BACKUP ]</button>
+      <span>SYSTEM://CHRONO_EVOLUTION_LAB.EXE [CLOUD-SYNC V22]</span>
+      <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+        <!-- FIREBASE AUTH & CLOUD CONTROLS -->
+        <span id="auth-status-text" style="font-size:10px; color:#fbbf24; margin-right:4px;">STATUS: GUEST</span>
+        <button id="login-btn" onclick="loginWithGoogle()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#fbbf24; border:1px solid #fbbf24;">[ GOOGLE LOGIN ]</button>
+        <button id="logout-btn" onclick="logoutFirebase()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#f87171; border:1px solid #f87171; display:none;">[ LOGOUT ]</button>
+        <button id="cloud-sync-btn" onclick="saveUserDataToCloud()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#34d399; border:1px solid #34d399; display:none;" title="Publish stats to leaderboard & save to Cloud">[ SYNC TO CLOUD ]</button>
+        <button id="leaderboard-btn" onclick="openLeaderboard()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#a3e635; border:1px solid #a3e635; display:none;">[ LEADERBOARD ]</button>
+
+        <button onclick="exportJSONBackup()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#a3e635; border:1px solid #a3e635;">[ EXPORT JSON ]</button>
+        <button onclick="document.getElementById('import-file-input').click()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#60a5fa; border:1px solid #60a5fa;">[ IMPORT JSON ]</button>
         <span style="margin-left: 10px;">[_-X]</span>
       </div>
     </div>
@@ -315,6 +447,136 @@
   </div>
 
   <script>
+    // --- FIREBASE AUTH & CLOUD SYNC FUNCTIONS ---
+    window.currentFirebaseUser = null;
+
+    async function loginWithGoogle() {
+      try {
+        await window.FB_signInWithPopup(window.FB_AUTH, window.FB_GoogleProvider);
+      } catch (error) {
+        console.error("Google Authentication failed:", error);
+        alert("Login failed: " + error.message);
+      }
+    }
+
+    async function logoutFirebase() {
+      try {
+        await window.FB_signOut(window.FB_AUTH);
+        alert("Successfully logged out.");
+      } catch (error) {
+        console.error("Logout failed:", error);
+      }
+    }
+
+    async function saveUserDataToCloud() {
+      if (!window.currentFirebaseUser) {
+        alert("Please log in with Google first to sync your lab to the cloud.");
+        return;
+      }
+      try {
+        saveState(); // Ensure local state is current
+        let userId = window.currentFirebaseUser.uid;
+        
+        // 1. Save user lab state document
+        let userDocRef = window.FB_doc(window.FB_DB, "labs", userId);
+        await window.FB_setDoc(userDocRef, {
+          email: window.currentFirebaseUser.email,
+          displayName: window.currentFirebaseUser.displayName || "Anonymous Researcher",
+          appState: appState,
+          lastUpdated: window.FB_serverTimestamp()
+        });
+
+        // 2. Aggregate stats for Public Leaderboard
+        let totalPopAcrossAllMonths = 0;
+        let totalIslandsAcrossAllMonths = 0;
+        for (let i = 1; i <= 12; i++) {
+          if (appState.months[i]) {
+            if (appState.months[i].population) totalPopAcrossAllMonths += appState.months[i].population.length;
+            if (appState.months[i].islandsEatenCount) totalIslandsAcrossAllMonths += appState.months[i].islandsEatenCount;
+          }
+        }
+
+        let leaderboardRef = window.FB_doc(window.FB_DB, "leaderboard", userId);
+        await window.FB_setDoc(leaderboardRef, {
+          userId: userId,
+          displayName: window.currentFirebaseUser.displayName || "Anonymous Researcher",
+          totalPopulation: totalPopAcrossAllMonths,
+          islandsEaten: totalIslandsAcrossAllMonths,
+          updatedAt: window.FB_serverTimestamp()
+        });
+
+        alert("Lab state successfully synchronized to Cloud & Leaderboard updated!");
+      } catch (err) {
+        console.error("Cloud sync failed:", err);
+        alert("Failed to sync with cloud database.");
+      }
+    }
+
+    async function loadUserDataFromCloud() {
+      if (!window.currentFirebaseUser) return;
+      try {
+        let userId = window.currentFirebaseUser.uid;
+        let userDocRef = window.FB_doc(window.FB_DB, "labs", userId);
+        let docSnap = await window.FB_getDoc(userDocRef);
+
+        if (docSnap.exists()) {
+          let cloudData = docSnap.data();
+          if (cloudData && cloudData.appState) {
+            appState = cloudData.appState;
+            saveState();
+            initFolders();
+            renderHabitManager();
+            console.log("Lab state successfully loaded from Cloud!");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load user data from cloud:", err);
+      }
+    }
+
+    async function openLeaderboard() {
+      toggleLeaderboard(true);
+      let tbody = document.getElementById('leaderboard-tbody');
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#777;">Fetching global ranks...</td></tr>`;
+
+      try {
+        let q = window.FB_query(window.FB_collection(window.FB_DB, "leaderboard"), window.FB_orderBy("totalPopulation", "desc"), window.FB_limit(15));
+        let querySnapshot = await window.FB_getDocs(q);
+
+        if (querySnapshot.empty) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#777;">No leaderboard records found yet. Be the first to sync!</td></tr>`;
+          return;
+        }
+
+        let html = '';
+        let rank = 1;
+        querySnapshot.forEach((docSnap) => {
+          let data = docSnap.data();
+          let dateStr = data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate().toLocaleDateString() : 'Recent';
+          html += `
+            <tr>
+              <td><b>#${rank}</b></td>
+              <td>${data.displayName || 'Researcher'}</td>
+              <td><span style="color:#a3e635;">${data.totalPopulation || 0}</span></td>
+              <td><span style="color:#34d399;">${data.islandsEaten || 0}</span></td>
+              <td style="color:#aaa; font-size:10px;">${dateStr}</td>
+            </tr>
+          `;
+          rank++;
+        });
+        tbody.innerHTML = html;
+      } catch (err) {
+        console.error("Error loading leaderboard:", err);
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#f87171;">Failed to load global leaderboard ranks.</td></tr>`;
+      }
+    }
+
+    window.toggleLeaderboard = function(show) {
+      let modal = document.getElementById('leaderboard-modal');
+      if (modal) modal.style.display = show ? 'flex' : 'none';
+    }
+
+    // --- EXISTING LAB SCRIPT LOGIC ---
     function playSound(soundId) {
       let audioElem = document.getElementById(soundId);
       if (audioElem) {
