@@ -359,16 +359,16 @@
 
   <!-- LEADERBOARD MODAL -->
   <div id="leaderboard-modal" class="retro-modal">
-    <h3>PUBLIC EVOLUTIONARY LEADERBOARD</h3>
+    <h3>PUBLIC EVOLUTIONARY LEADERBOARD (SORTED BY ISLANDS EATEN)</h3>
     <div style="flex: 1; overflow-y: auto; margin-top: 10px;">
-      <p style="font-size: 11px; color: #aaa;">Compare top ecosystem populations, habits, and miniatures across all researchers worldwide who opted in.</p>
+      <p style="font-size: 11px; color: #aaa;">Compare ecosystem populations, habits, miniatures, and islands consumed across all researchers worldwide who opted in.</p>
       <table class="leaderboard-table">
         <thead>
           <tr>
             <th>Rank</th>
             <th>Researcher</th>
-            <th>Total Population</th>
             <th>Islands Eaten</th>
+            <th>Total Population</th>
             <th>Month 1 Biome & Habit Stats</th>
             <th>Last Updated</th>
           </tr>
@@ -389,8 +389,9 @@
     <div style="flex: 1; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 14px; font-size: 12px; padding-right: 4px;">
       
       <div>
-        <label style="display:block; margin-bottom:4px; color:#a3e635;"><b>Researcher Nickname:</b></label>
+        <label style="display:block; margin-bottom:4px; color:#a3e635;"><b>Researcher Nickname:</b> <span id="settings-cooldown-notice" style="font-size:10px; color:#fbbf24; font-weight:normal;"></span></label>
         <input type="text" id="settings-nickname-input" style="width: 100%; box-sizing: border-box;" placeholder="Enter custom researcher alias">
+        <div style="font-size: 10px; color: #888; margin-top: 3px;">Note: Username updates are limited to once every 14 days.</div>
       </div>
 
       <div>
@@ -438,7 +439,7 @@
         <span>SYSTEM://CHRONO_EVOLUTION_LAB.EXE</span>
         <div id="header-user-display" style="display: flex; align-items: center; gap: 6px; background: #000; color: #fff; padding: 2px 8px; border: 1px solid #777; font-size: 11px; cursor: pointer;" onclick="openSettingsModal()" title="Click to open Personal Cabinet Settings">
           <span id="header-avatar">🧬</span>
-          <span id="header-nickname" style="color: #a3e635; font-weight: bold;">Researcher</span>
+          <span id="header-nickname" style="color: #a3e635; font-weight: bold;" title="Hover to view previous names">Researcher</span>
           <span style="color: #777;">|</span>
           <span>Pop: <b id="header-stat-pop" style="color: #34d399;">0</b></span>
           <span>Eaten: <b id="header-stat-eaten" style="color: #fbbf24;">0</b></span>
@@ -657,6 +658,7 @@
         await window.FB_setDoc(userDocRef, {
           email: window.currentFirebaseUser.email,
           displayName: appState.settings.nickname || window.currentFirebaseUser.displayName || "Anonymous Researcher",
+          previousNames: appState.settings.previousNames || [],
           avatar: appState.settings.avatar || "🧬",
           shareHabits: appState.settings.shareHabits,
           showBiome: appState.settings.showBiome,
@@ -701,6 +703,7 @@
         await window.FB_setDoc(leaderboardRef, {
           userId: userId,
           displayName: `${appState.settings.avatar || '🧬'} ${appState.settings.nickname || window.currentFirebaseUser.displayName || 'Researcher'}`,
+          previousNames: appState.settings.previousNames || [],
           totalPopulation: totalPopAcrossAllMonths,
           islandsEaten: totalIslandsAcrossAllMonths,
           shareHabits: !!appState.settings.shareHabits,
@@ -732,8 +735,9 @@
           if (cloudData && cloudData.appState) {
             appState = cloudData.appState;
             if (!appState.settings) {
-              appState.settings = { nickname: window.currentFirebaseUser.displayName || "Researcher", avatar: "🧬", shareHabits: true, showBiome: true };
+              appState.settings = { nickname: window.currentFirebaseUser.displayName || "Researcher", previousNames: [], lastNicknameChange: 0, avatar: "🧬", shareHabits: true, showBiome: true };
             }
+            if (!appState.settings.previousNames) appState.settings.previousNames = [];
             saveState();
             initFolders();
             renderHabitManager();
@@ -748,10 +752,10 @@
     async function openLeaderboard() {
       toggleLeaderboard(true);
       let tbody = document.getElementById('leaderboard-tbody');
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#777;">Fetching global ranks...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#777;">Fetching global ranks sorted by islands eaten...</td></tr>`;
 
       try {
-        let q = window.FB_query(window.FB_collection(window.FB_DB, "leaderboard"), window.FB_orderBy("totalPopulation", "desc"), window.FB_limit(15));
+        let q = window.FB_query(window.FB_collection(window.FB_DB, "leaderboard"), window.FB_orderBy("islandsEaten", "desc"), window.FB_limit(15));
         let querySnapshot = await window.FB_getDocs(q);
 
         if (querySnapshot.empty) {
@@ -769,6 +773,9 @@
           let rowId = `lb-canvas-${rank}`;
           
           let biomeAndStatsHtml = `<span style="color:#777; font-size:11px;">Private / Opted Out</span>`;
+
+          let prevNamesList = (data.previousNames && data.previousNames.length > 0) ? data.previousNames.join(', ') : 'None';
+          let nameTooltipText = `Previous Names: ${prevNamesList}`;
 
           if (data.showBiome || data.shareHabits) {
             let habitsHtml = '';
@@ -808,9 +815,9 @@
           html += `
             <tr>
               <td><b>#${rank}</b></td>
-              <td>${data.displayName || 'Researcher'}</td>
+              <td><span title="${nameTooltipText}" style="cursor:help; border-bottom:1px dotted #888;">${data.displayName || 'Researcher'}</span></td>
+              <td><span style="color:#34d399; font-weight:bold;">${data.islandsEaten || 0}</span></td>
               <td><span style="color:#a3e635;">${data.totalPopulation || 0}</span></td>
-              <td><span style="color:#34d399;">${data.islandsEaten || 0}</span></td>
               <td>${biomeAndStatsHtml}</td>
               <td style="color:#aaa; font-size:10px;">${dateStr}</td>
             </tr>
@@ -874,7 +881,24 @@
       let modal = document.getElementById('settings-modal');
       if (modal) {
         if (show) {
-          document.getElementById('settings-nickname-input').value = appState.settings.nickname || 'Researcher';
+          let currentNick = appState.settings.nickname || 'Researcher';
+          document.getElementById('settings-nickname-input').value = currentNick;
+          
+          let cooldownNotice = document.getElementById('settings-cooldown-notice');
+          let now = Date.now();
+          let lastChange = appState.settings.lastNicknameChange || 0;
+          let fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+          let timeRemaining = fourteenDaysMs - (now - lastChange);
+
+          if (timeRemaining > 0) {
+            let daysLeft = Math.ceil(timeRemaining / (24 * 60 * 60 * 1000));
+            cooldownNotice.innerText = `(Locked: can change in ${daysLeft} days)`;
+            document.getElementById('settings-nickname-input').disabled = true;
+          } else {
+            cooldownNotice.innerText = `(Available)`;
+            document.getElementById('settings-nickname-input').disabled = false;
+          }
+
           let currentAvatar = appState.settings.avatar || '🧬';
           document.getElementById('settings-avatar-input').value = currentAvatar;
           let preview = document.getElementById('settings-avatar-preview');
@@ -902,7 +926,23 @@
       let shareCheck = document.getElementById('settings-share-habits').checked;
       let biomeCheck = document.getElementById('settings-show-biome').checked;
 
-      appState.settings.nickname = nickInput || 'Researcher';
+      let now = Date.now();
+      let lastChange = appState.settings.lastNicknameChange || 0;
+      let fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+
+      if (!document.getElementById('settings-nickname-input').disabled && nickInput && nickInput !== appState.settings.nickname) {
+        if (now - lastChange < fourteenDaysMs) {
+          alert("You can only change your username once every 14 days!");
+          return;
+        }
+        if (!appState.settings.previousNames) appState.settings.previousNames = [];
+        if (appState.settings.nickname && appState.settings.nickname !== 'Researcher') {
+          appState.settings.previousNames.push(appState.settings.nickname);
+        }
+        appState.settings.nickname = nickInput;
+        appState.settings.lastNicknameChange = now;
+      }
+
       appState.settings.avatar = avatarInput;
       appState.settings.shareHabits = shareCheck;
       appState.settings.showBiome = biomeCheck;
@@ -916,9 +956,16 @@
       let nicknameElem = document.getElementById('header-nickname');
       let avatarElem = document.getElementById('header-avatar');
       let miniCvs = document.getElementById('header-biome-mini');
+      let userDisplayBox = document.getElementById('header-user-display');
 
-      if (nicknameElem) nicknameElem.innerText = appState.settings.nickname || 'Researcher';
+      let currentNick = appState.settings.nickname || 'Researcher';
+      if (nicknameElem) nicknameElem.innerText = currentNick;
       if (avatarElem) avatarElem.innerText = appState.settings.avatar || '🧬';
+
+      if (userDisplayBox) {
+        let prevList = (appState.settings.previousNames && appState.settings.previousNames.length > 0) ? appState.settings.previousNames.join(', ') : 'None';
+        userDisplayBox.title = `Current: ${currentNick}\nPrevious Names: ${prevList}\nClick to open Cabinet Settings`;
+      }
 
       if (miniCvs) {
         if (appState.settings.showBiome !== false) {
@@ -983,7 +1030,7 @@
       }
     }
 
-    const STORAGE_KEY = 'CHRONO_DNA_PUBLIC_V22';
+    const STORAGE_KEY = 'CHRONO_DNA_PUBLIC_V23';
 
     const AVAILABLE_MORPHS = [
       { id: 'flagella', label: 'Flagella (Speed/Tail)' },
@@ -1025,7 +1072,7 @@
       }
       return { 
         activeMonth: 1, 
-        settings: { nickname: 'Researcher', avatar: '🧬', shareHabits: true, showBiome: true },
+        settings: { nickname: 'Researcher', previousNames: [], lastNicknameChange: 0, avatar: '🧬', shareHabits: true, showBiome: true },
         months: months 
       };
     }
@@ -1039,8 +1086,11 @@
           let parsed = JSON.parse(saved);
           let now = Date.now();
           if (!parsed.settings) {
-            parsed.settings = { nickname: 'Researcher', avatar: '🧬', shareHabits: true, showBiome: true };
+            parsed.settings = { nickname: 'Researcher', previousNames: [], lastNicknameChange: 0, avatar: '🧬', shareHabits: true, showBiome: true };
           }
+          if (!parsed.settings.previousNames) parsed.settings.previousNames = [];
+          if (parsed.settings.lastNicknameChange === undefined) parsed.settings.lastNicknameChange = 0;
+
           for (let i = 1; i <= 12; i++) {
             if (!parsed.months[i]) {
               parsed.months[i] = getDefaultState().months[i];
@@ -1059,7 +1109,8 @@
               let lastTime = parsed.months[i].lastSavedTimestamp || now;
               let elapsedHours = (now - lastTime) / (1000 * 60 * 60);
               if (elapsedHours > 0 && parsed.months[i].population) {
-                let dropAmount = elapsedHours * 4;
+                // 2% per hour offline decay of well-being[cite: 5]
+                let dropAmount = elapsedHours * 2.0; 
                 parsed.months[i].population.forEach(org => {
                   org.wellbeing = Math.max(0, org.wellbeing - dropAmount);
                 });
@@ -1111,7 +1162,8 @@
           let importedData = JSON.parse(e.target.result);
           if (importedData && importedData.months) {
             appState = importedData;
-            if (!appState.settings) appState.settings = { nickname: 'Researcher', avatar: '🧬', shareHabits: true, showBiome: true };
+            if (!appState.settings) appState.settings = { nickname: 'Researcher', previousNames: [], lastNicknameChange: 0, avatar: '🧬', shareHabits: true, showBiome: true };
+            if (!appState.settings.previousNames) appState.settings.previousNames = [];
             saveState();
             initFolders();
             renderHabitManager();
@@ -2163,7 +2215,7 @@
       trCtx.beginPath();
       trCtx.moveTo(padding, padding);
       trCtx.lineTo(padding, trendCvs.height - padding);
-      trCtx.lineTo(trendCsv.width - padding, trendCvs.height - padding);
+      trCtx.lineTo(trendCvs.width - padding, trendCvs.height - padding);
       trCtx.stroke();
 
       let maxSteps = Math.max(history.length, 1);
@@ -2189,7 +2241,7 @@
     }
 
     window.resetEntireTracker = function() {
-      if (confirm("Are you sure you want to reset all data and start over?")) {
+      if (confirm("Are you sure you want to completely wipe all months, habits, and population data?")) {
         localStorage.removeItem(STORAGE_KEY);
         appState = getDefaultState();
         saveState();
@@ -2198,23 +2250,23 @@
         updateHeaderPlayerProfile();
         alert("Tracker fully reset.");
       }
-    }
+    };
 
     initFolders();
     renderHabitManager();
 
     let lastFrameTime = performance.now();
-    function mainLoop(now) {
+    function globalAnimationLoop(now) {
       let dt = (now - lastFrameTime) / 1000;
-      if (dt > 0.2) dt = 0.2;
       lastFrameTime = now;
+      if (dt > 0.2) dt = 0.2;
 
       runSimulationLoop(dt);
       drawPreview3D();
 
-      requestAnimationFrame(mainLoop);
+      requestAnimationFrame(globalAnimationLoop);
     }
-    requestAnimationFrame(mainLoop);
+    requestAnimationFrame(globalAnimationLoop);
   </script>
 </body>
 </html>
