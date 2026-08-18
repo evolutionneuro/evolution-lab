@@ -1109,7 +1109,6 @@
               let lastTime = parsed.months[i].lastSavedTimestamp || now;
               let elapsedHours = (now - lastTime) / (1000 * 60 * 60);
               if (elapsedHours > 0 && parsed.months[i].population) {
-                // 2% per hour offline decay of well-being[cite: 5]
                 let dropAmount = elapsedHours * 2.0; 
                 parsed.months[i].population.forEach(org => {
                   org.wellbeing = Math.max(0, org.wellbeing - dropAmount);
@@ -1950,7 +1949,7 @@
         for (let i = monthData.population.length - 1; i >= 0; i--) {
           let org = monthData.population[i];
 
-          org.wellbeing -= (4 / 3600) * (1/30) * 100;
+          org.wellbeing -= (1 / 3600) * (1/30) * 100 * (dt * 60);
           if (org.wellbeing < 0) org.wellbeing = 0;
 
           if (org.wellbeing <= 0) {
@@ -2255,18 +2254,22 @@
     initFolders();
     renderHabitManager();
 
-    let lastFrameTime = performance.now();
-    function globalAnimationLoop(now) {
-      let dt = (now - lastFrameTime) / 1000;
-      lastFrameTime = now;
-      if (dt > 0.2) dt = 0.2;
+    // ==========================================
+    // REAL-TIME BACKGROUND SIMULATION TICKER
+    // ==========================================
+    let lastWallTime = Date.now();
+    function globalSimulationTicker() {
+      let now = Date.now();
+      let dt = (now - lastWallTime) / 1000;
+      lastWallTime = now;
+      if (dt > 0.5) dt = 0.5; // Cap delta time to prevent large jumps after long tab switches
 
       runSimulationLoop(dt);
       drawPreview3D();
-
-      requestAnimationFrame(globalAnimationLoop);
     }
-    requestAnimationFrame(globalAnimationLoop);
+
+    // Run using setInterval to maintain real-time updates even in background tabs
+    setInterval(globalSimulationTicker, 1000 / 60);
   </script>
 </body>
 </html>
