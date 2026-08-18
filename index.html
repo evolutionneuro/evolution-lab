@@ -1,4 +1,4 @@
-[cite: 3]<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -27,24 +27,21 @@
       serverTimestamp 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // TODO: Replace with your actual Firebase project configuration credentials
-const firebaseConfig = {
-  apiKey: "AIzaSyD9ITtErx2-nCg0-AeMMxxp5JNEmScmkGo",
-  authDomain: "neurobiome.firebaseapp.com",
-  projectId: "neurobiome",
-  storageBucket: "neurobiome.firebasestorage.app",
-  messagingSenderId: "767375064224",
-  appId: "1:767375064224:web:6c5c0347f067547ee01dc5",
-  measurementId: "G-SSQMF3WTTB"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyD9ITtErx2-nCg0-AeMMxxp5JNEmScmkGo",
+      authDomain: "neurobiome.firebaseapp.com",
+      projectId: "neurobiome",
+      storageBucket: "neurobiome.firebasestorage.app",
+      messagingSenderId: "767375064224",
+      appId: "1:767375064224:web:6c5c0347f067547ee01dc5",
+      measurementId: "G-SSQMF3WTTB"
+    };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
     const googleProvider = new GoogleAuthProvider();
 
-    // Expose Firebase tools globally for UI handlers
     window.FB_AUTH = auth;
     window.FB_DB = db;
     window.FB_GoogleProvider = googleProvider;
@@ -60,7 +57,6 @@ const firebaseConfig = {
     window.FB_getDocs = getDocs;
     window.FB_serverTimestamp = serverTimestamp;
 
-    // Listen to Auth State Changes
     onAuthStateChanged(auth, async (user) => {
       const authStatusSpan = document.getElementById('auth-status-text');
       const loginBtn = document.getElementById('login-btn');
@@ -76,7 +72,6 @@ const firebaseConfig = {
         if (cloudSyncBtn) cloudSyncBtn.style.display = 'inline-block';
         if (leaderboardBtn) leaderboardBtn.style.display = 'inline-block';
         
-        // Auto-load data from Firestore upon login
         await loadUserDataFromCloud();
       } else {
         window.currentFirebaseUser = null;
@@ -281,7 +276,6 @@ const firebaseConfig = {
       margin-top: 8px;
       margin-bottom: 8px;
     }
-    /* LEADERBOARD TABLE STYLING */
     .leaderboard-table {
       width: 100%;
       border-collapse: collapse;
@@ -301,19 +295,17 @@ const firebaseConfig = {
 </head>
 <body>
 
-  <!-- LOCAL AUDIO FILES MAPPING -->
   <audio id="sound1" src="sound1.mp3" preload="auto"></audio>
   <audio id="sound2" src="sound2.mp3" preload="auto"></audio>
   <audio id="sound3" src="sound3.mp3" preload="auto"></audio>
 
-  <!-- HIDDEN FILE INPUT FOR JSON RESTORE -->
   <input type="file" id="import-file-input" style="display: none;" accept=".json" onchange="importJSONBackup(event)">
 
   <!-- LEADERBOARD MODAL -->
   <div id="leaderboard-modal" class="retro-modal">
     <h3>PUBLIC EVOLUTIONARY LEADERBOARD</h3>
     <div style="flex: 1; overflow-y: auto; margin-top: 10px;">
-      <p style="font-size: 11px; color: #aaa;">Compare top ecosystem populations and islands consumed across all researchers worldwide.</p>
+      <p style="font-size: 11px; color: #aaa;">Compare top ecosystem populations, habits, and miniatures across all researchers worldwide who opted in.</p>
       <table class="leaderboard-table">
         <thead>
           <tr>
@@ -321,11 +313,12 @@ const firebaseConfig = {
             <th>Researcher</th>
             <th>Total Population</th>
             <th>Islands Eaten</th>
+            <th>Month 1 Biome & Habit Stats</th>
             <th>Last Updated</th>
           </tr>
         </thead>
         <tbody id="leaderboard-tbody">
-          <tr><td colspan="5" style="text-align:center; color:#777;">Loading leaderboard ranks...</td></tr>
+          <tr><td colspan="6" style="text-align:center; color:#777;">Loading leaderboard ranks...</td></tr>
         </tbody>
       </table>
     </div>
@@ -366,7 +359,7 @@ const firebaseConfig = {
       <div>
         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
           <input type="checkbox" id="settings-show-biome" style="accent-color: #a3e635;" checked>
-          <span><b>Show your MONTH 1 biome in miniature near username</b></span>
+          <span><b>Show your MONTH 1 biome in miniature near username & leaderboard</b></span>
         </label>
       </div>
 
@@ -381,7 +374,6 @@ const firebaseConfig = {
     <div class="window-header">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span>SYSTEM://CHRONO_EVOLUTION_LAB.EXE</span>
-        <!-- LIVE HEADER PROFILE & MINIATURE BIOME PREVIEW -->
         <div id="header-user-display" style="display: flex; align-items: center; gap: 6px; background: #000; color: #fff; padding: 2px 8px; border: 1px solid #777; font-size: 11px; cursor: pointer;" onclick="openSettingsModal()" title="Click to open Personal Cabinet Settings">
           <span id="header-avatar">🧬</span>
           <span id="header-nickname" style="color: #a3e635; font-weight: bold;">Researcher</span>
@@ -392,7 +384,6 @@ const firebaseConfig = {
         </div>
       </div>
       <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-        <!-- FIREBASE AUTH & CLOUD CONTROLS -->
         <span id="auth-status-text" style="font-size:10px; color:#fbbf24; margin-right:4px;">STATUS: GUEST</span>
         <button id="login-btn" onclick="loginWithGoogle()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#fbbf24; border:1px solid #fbbf24;">[ GOOGLE LOGIN ]</button>
         <button id="logout-btn" onclick="logoutFirebase()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#f87171; border:1px solid #f87171; display:none;">[ LOGOUT ]</button>
@@ -434,14 +425,12 @@ const firebaseConfig = {
         <h3>ACTIVE ECOSYSTEM (MONTH <span id="active-month-label">1</span>)</h3>
         <canvas id="simulation-canvas" width="660" height="260"></canvas>
         
-        <!-- SOUND TOGGLE & STATS CONTROL BAR -->
         <div style="display: flex; gap: 8px; margin-top: 8px;">
           <button id="sim-sound-toggle" onclick="toggleSimSound()" style="flex: 1; background: #111; color: #f87171; border: 1px solid #555; font-size: 11px; padding: 6px;">
             SOUNDS: OFF [CLICK TO ENABLE]
           </button>
         </div>
 
-        <!-- WELL-BEING & STATUS PANEL -->
         <div style="background:#111; border:1px solid #444; padding:8px 12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
           <div style="display:flex; align-items:center; gap:8px;">
             <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering:crispEdges;">
@@ -454,7 +443,6 @@ const firebaseConfig = {
           </div>
         </div>
 
-        <!-- ADDITIONAL STATS: ISLANDS EATEN & GENE POOL MINI-GRAPH -->
         <div style="background:#0d0d0d; border:1px solid #444; padding:8px 12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
           <div style="font-size:11px; display:flex; flex-direction:column; gap:2px; min-width: 140px;">
             <span>Islands Eaten: <b id="stat-islands-eaten" style="color:#34d399;">0</b></span>
@@ -504,7 +492,6 @@ const firebaseConfig = {
   </div>
 
   <script>
-    // --- FIREBASE AUTH & CLOUD SYNC FUNCTIONS ---
     window.currentFirebaseUser = null;
 
     async function loginWithGoogle() {
@@ -531,21 +518,20 @@ const firebaseConfig = {
         return;
       }
       try {
-        saveState(); // Ensure local state is current
+        saveState();
         let userId = window.currentFirebaseUser.uid;
         
-        // 1. Save user lab state document
         let userDocRef = window.FB_doc(window.FB_DB, "labs", userId);
         await window.FB_setDoc(userDocRef, {
           email: window.currentFirebaseUser.email,
           displayName: appState.settings.nickname || window.currentFirebaseUser.displayName || "Anonymous Researcher",
           avatar: appState.settings.avatar || "🧬",
           shareHabits: appState.settings.shareHabits,
+          showBiome: appState.settings.showBiome,
           appState: appState,
           lastUpdated: window.FB_serverTimestamp()
         });
 
-        // 2. Aggregate stats for Public Leaderboard
         let totalPopAcrossAllMonths = 0;
         let totalIslandsAcrossAllMonths = 0;
         for (let i = 1; i <= 12; i++) {
@@ -555,13 +541,41 @@ const firebaseConfig = {
           }
         }
 
+        // Prepare month 1 snapshot data for leaderboard if permitted
+        let m1Snapshot = null;
+        let habitsSnapshot = null;
+
+        if (appState.settings.showBiome !== false && appState.months[1]) {
+          let m1 = appState.months[1];
+          m1Snapshot = {
+            stones: m1.stones || [],
+            plants: (m1.plants || []).map(pl => ({
+              x: pl.x,
+              y: pl.y,
+              pixels: pl.pixels.map(px => ({ offsetX: px.offsetX, offsetY: px.offsetY, alive: px.alive }))
+            })),
+            population: (m1.population || []).map(org => ({
+              x: org.x,
+              y: org.y,
+              habitsSnapshot: org.habitsSnapshot
+            }))
+          };
+        }
+
+        if (appState.settings.shareHabits && appState.months[1] && appState.months[1].habits) {
+          habitsSnapshot = appState.months[1].habits;
+        }
+
         let leaderboardRef = window.FB_doc(window.FB_DB, "leaderboard", userId);
         await window.FB_setDoc(leaderboardRef, {
           userId: userId,
           displayName: `${appState.settings.avatar || '🧬'} ${appState.settings.nickname || window.currentFirebaseUser.displayName || 'Researcher'}`,
           totalPopulation: totalPopAcrossAllMonths,
           islandsEaten: totalIslandsAcrossAllMonths,
-          shareHabits: appState.settings.shareHabits,
+          shareHabits: !!appState.settings.shareHabits,
+          showBiome: appState.settings.showBiome !== false,
+          habits: habitsSnapshot,
+          m1Snapshot: m1Snapshot,
           updatedAt: window.FB_serverTimestamp()
         });
 
@@ -601,37 +615,126 @@ const firebaseConfig = {
     async function openLeaderboard() {
       toggleLeaderboard(true);
       let tbody = document.getElementById('leaderboard-tbody');
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#777;">Fetching global ranks...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#777;">Fetching global ranks...</td></tr>`;
 
       try {
         let q = window.FB_query(window.FB_collection(window.FB_DB, "leaderboard"), window.FB_orderBy("totalPopulation", "desc"), window.FB_limit(15));
         let querySnapshot = await window.FB_getDocs(q);
 
         if (querySnapshot.empty) {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#777;">No leaderboard records found yet. Be the first to sync!</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#777;">No leaderboard records found yet. Be the first to sync!</td></tr>`;
           return;
         }
 
         let html = '';
         let rank = 1;
+        let renderQueue = [];
+
         querySnapshot.forEach((docSnap) => {
           let data = docSnap.data();
           let dateStr = data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate().toLocaleDateString() : 'Recent';
+          let rowId = `lb-canvas-${rank}`;
+          
+          let biomeAndStatsHtml = `<span style="color:#777; font-size:11px;">Private / Opted Out</span>`;
+
+          if (data.showBiome || data.shareHabits) {
+            let parts = [];
+            if (data.showBiome && data.m1Snapshot) {
+              parts.append = `<canvas id="${rowId}" width="70" height="30" style="border:1px solid #555; background:#000; vertical-align:middle; display:inline-block;"></canvas>`;
+            }
+            
+            let habitsHtml = '';
+            if (data.shareHabits && data.habits && data.habits.length > 0) {
+              habitsHtml = `<div style="display:flex; flex-direction:column; gap:3px; margin-top:4px;">`;
+              data.habits.forEach(h => {
+                let isYN = h.type === 'yn';
+                let valDisplay = isYN ? (h.units > 0 ? 'YES' : 'NO') : `${Math.min(h.units, 8)}h`;
+                let pct = isYN ? (h.units > 0 ? 100 : 10) : Math.round((Math.min(h.units, 8) / 8) * 100);
+                habitsHtml += `
+                  <div style="font-size:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1px;">
+                      <span style="color:${h.color}; display:flex; align-items:center; gap:4px;"><span style="width:6px; height:6px; background:${h.color}; display:inline-block;"></span>${h.name}:</span>
+                      <b style="color:#fff;">${valDisplay}</b>
+                    </div>
+                    <div style="width:120px; background:#222; height:3px; border:1px solid #444;">
+                      <div style="width:${pct}%; background:${h.color}; height:100%;"></div>
+                    </div>
+                  </div>
+                `;
+              });
+              habitsHtml += `</div>`;
+            }
+
+            biomeAndStatsHtml = `
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                ${data.showBiome && data.m1Snapshot ? `<canvas id="${rowId}" width="70" height="30" style="border:1px solid #555; background:#000; vertical-align:middle;"></canvas>` : ''}
+                ${habitsHtml}
+              </div>
+            `;
+
+            if (data.showBiome && data.m1Snapshot) {
+              renderQueue.push({ canvasId: rowId, m1: data.m1Snapshot });
+            }
+          }
+
           html += `
             <tr>
               <td><b>#${rank}</b></td>
               <td>${data.displayName || 'Researcher'}</td>
               <td><span style="color:#a3e635;">${data.totalPopulation || 0}</span></td>
               <td><span style="color:#34d399;">${data.islandsEaten || 0}</span></td>
+              <td>${biomeAndStatsHtml}</td>
               <td style="color:#aaa; font-size:10px;">${dateStr}</td>
             </tr>
           `;
           rank++;
         });
+
         tbody.innerHTML = html;
+
+        // Render mini canvases in leaderboard after DOM insertion
+        setTimeout(() => {
+          renderQueue.forEach(item => {
+            let cvs = document.getElementById(item.canvasId);
+            if (!cvs) return;
+            let ctx = cvs.getContext('2d');
+            ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+            let scaleX = cvs.width / 660;
+            let scaleY = cvs.height / 260;
+
+            if (item.m1.stones) {
+              item.m1.stones.forEach(st => {
+                ctx.fillStyle = '#525252';
+                ctx.beginPath();
+                ctx.arc(st.x * scaleX, st.y * scaleY, Math.max(1, st.baseRadius * scaleX), 0, Math.PI * 2);
+                ctx.fill();
+              });
+            }
+
+            if (item.m1.plants) {
+              item.m1.plants.forEach(pl => {
+                pl.pixels.forEach(px => {
+                  if (px.alive) {
+                    ctx.fillStyle = '#34d399';
+                    ctx.fillRect((pl.x + px.offsetX) * scaleX, (pl.y + px.offsetY) * scaleY, 1.2, 1.2);
+                  }
+                });
+              });
+            }
+
+            if (item.m1.population) {
+              item.m1.population.forEach(org => {
+                ctx.fillStyle = (org.habitsSnapshot && org.habitsSnapshot[0]) ? org.habitsSnapshot[0].color : '#f87171';
+                ctx.fillRect(org.x * scaleX - 1, org.y * scaleY - 1, 2, 2);
+              });
+            }
+          });
+        }, 50);
+
       } catch (err) {
         console.error("Error loading leaderboard:", err);
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#f87171;">Failed to load global leaderboard ranks.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#f87171;">Failed to load global leaderboard ranks.</td></tr>`;
       }
     }
 
@@ -692,7 +795,6 @@ const firebaseConfig = {
       }
     }
 
-    // --- EXISTING LAB SCRIPT LOGIC ---
     function playSound(soundId) {
       let audioElem = document.getElementById(soundId);
       if (audioElem) {
@@ -855,7 +957,6 @@ const firebaseConfig = {
       }
     }
 
-    // Backup & Restore JSON Functions
     function exportJSONBackup() {
       saveState();
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
@@ -891,7 +992,7 @@ const firebaseConfig = {
         }
       };
       reader.readAsText(file);
-      event.target.value = ''; // Reset input
+      event.target.value = '';
     }
 
     setInterval(() => {
@@ -2186,9 +2287,7 @@ const firebaseConfig = {
       }, simulationIntervalMs);
 
       function renderLoop() {
-        if (!document.hidden) {
-          // Frame updates handled smoothly
-        }
+        if (!document.hidden) {}
         requestAnimationFrame(renderLoop);
       }
       requestAnimationFrame(renderLoop);
