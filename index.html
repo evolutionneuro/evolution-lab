@@ -40,8 +40,19 @@
       position: relative; z-index: 10;
       width: 95%; max-width: 1200px;
       display: flex; flex-direction: column; align-items: center; gap: 10px;
-      margin-top: 16px;
+      margin-top: 14px;
     }
+
+    /* Top Stats Bar */
+    .stats-bar {
+      width: 100%; background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 6px; padding: 8px 14px; display: flex; gap: 16px;
+      align-items: center; justify-content: space-around; flex-wrap: wrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .stat-item { display: flex; flex-direction: column; align-items: center; }
+    .stat-val { font-size: 14px; font-weight: 800; color: #3a86ff; }
+    .stat-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
 
     .controls {
       display: flex; gap: 8px; align-items: center; width: 100%; justify-content: space-between;
@@ -51,8 +62,8 @@
 
     button {
       background: var(--btn-bg); color: var(--btn-text);
-      border: 1.5px solid var(--card-border); padding: 6px 12px;
-      font-weight: 600; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;
+      border: 1.5px solid var(--card-border); padding: 5px 10px;
+      font-weight: 600; font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase;
       cursor: pointer; transition: all 0.2s ease; border-radius: 4px;
     }
     button:hover { background: var(--text-main); color: var(--bg); }
@@ -61,11 +72,11 @@
 
     .calendar-card {
       background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px;
-      padding: 14px; width: 100%; overflow-x: auto;
+      padding: 12px; width: 100%; overflow-x: auto;
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     }
 
-    .calendar-body { display: flex; gap: 14px; align-items: flex-start; }
+    .calendar-body { display: flex; gap: 12px; align-items: flex-start; }
 
     .days-sidebar {
       display: grid; grid-template-rows: repeat(7, 13px); gap: 3px;
@@ -101,7 +112,7 @@
     }
     .slot:hover { transform: scale(1.3); z-index: 15; }
 
-    /* Center Section - Clickers */
+    /* Center Section */
     .center-stage {
       position: relative; z-index: 10;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -113,19 +124,17 @@
       flex-wrap: wrap; width: 100%; max-width: 900px;
     }
 
-    .clicker-card {
-      display: flex; flex-direction: column; align-items: center; gap: 10px;
-    }
+    .clicker-card { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
     .clicker-btn {
-      width: 110px; height: 110px; border-radius: 50%;
+      width: 100px; height: 100px; border-radius: 50%;
       background: var(--card-bg); border: 3px solid #ffffff;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       cursor: pointer; transition: transform 0.05s ease, box-shadow 0.2s ease;
       box-shadow: 0 8px 30px rgba(0,0,0,0.4);
     }
     .clicker-btn:active { transform: scale(0.92); }
-    .click-val { font-size: 28px; font-weight: 800; color: var(--text-main); }
+    .click-val { font-size: 26px; font-weight: 800; color: var(--text-main); }
 
     .clicker-controls { display: flex; gap: 4px; align-items: center; }
     .clicker-name {
@@ -141,7 +150,8 @@
       padding: 12px; border-radius: 6px; width: 230px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     }
-    #statsHoverCard .pop-date { font-size: 11px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
+    #statsHoverCard .pop-date { font-size: 11px; font-weight: 800; color: var(--text-main); margin-bottom: 2px; }
+    #statsHoverCard .pop-event { font-size: 10px; font-weight: 700; color: #a8dadc; margin-bottom: 4px; }
     #statsHoverCard .pop-total { font-size: 10px; font-weight: 700; color: #8a8a9e; margin-bottom: 8px; }
     #statsHoverCard .pop-list { font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
     #statsHoverCard .pop-bar { height: 4px; border-radius: 2px; transition: width 0.3s; }
@@ -157,11 +167,25 @@
     .modal {
       background: var(--card-bg); border: 1.5px solid var(--card-border);
       padding: 24px; border-radius: 8px; width: 500px; max-width: 90%;
-      display: flex; flex-direction: column; gap: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+      display: flex; flex-direction: column; gap: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.6);
     }
     .modal-header { font-size: 16px; font-weight: 800; color: var(--text-main); }
+    
+    .event-section { display: flex; flex-direction: column; gap: 8px; }
+    .event-input {
+      background: var(--bg); color: var(--text-main); border: 1px solid var(--slot-border);
+      padding: 8px; border-radius: 4px; outline: none; font-size: 12px;
+    }
+    .pastel-palette { display: flex; gap: 8px; }
+    .pastel-chip {
+      width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: transform 0.15s ease;
+    }
+    .pastel-chip:hover { transform: scale(1.15); }
+    .pastel-chip.selected { border-color: #ffffff; }
+
     .modal textarea {
-      width: 100%; height: 180px; background: var(--bg); color: var(--text-main);
+      width: 100%; height: 140px; background: var(--bg); color: var(--text-main);
       border: 1px solid var(--slot-border); padding: 12px; border-radius: 6px;
       resize: vertical; font-family: inherit; font-size: 13px; outline: none; line-height: 1.4;
     }
@@ -173,13 +197,15 @@
   <canvas id="physicsCanvas"></canvas>
 
   <div class="top-container">
+    <div class="stats-bar" id="statsBar"></div>
+
     <div class="controls">
       <div class="spell-group">
         <button id="spellNone" class="active">Normal</button>
-        <button id="spellHole">🌀 Black Hole</button>
-        <button id="spellTornado">🌪️ Tornado</button>
-        <button id="spellFreeze">❄️ Freeze</button>
-        <button id="spellFire">🔥 Fire</button>
+        <button id="spellHole">Black Hole</button>
+        <button id="spellTornado">Tornado</button>
+        <button id="spellFreeze">Freeze</button>
+        <button id="spellFire">Fire</button>
       </div>
       <div class="sys-group">
         <button id="addClickerBtn">+ Add Clicker</button>
@@ -203,6 +229,7 @@
 
   <div id="statsHoverCard">
     <div class="pop-date" id="popDate">2026-08-26</div>
+    <div class="pop-event" id="popEvent" style="display:none;"></div>
     <div class="pop-total" id="popTotal">Total Clicks: 0</div>
     <div class="pop-list" id="popList"></div>
     <div class="pop-note" id="popNote" style="display:none;"></div>
@@ -210,19 +237,38 @@
 
   <div class="modal-overlay" id="noteModal">
     <div class="modal">
-      <div class="modal-header" id="modalDate">Day Notes</div>
-      <textarea id="noteInput" placeholder="Write your daily thoughts or milestones..."></textarea>
+      <div class="modal-header" id="modalDate">Day Settings</div>
+      
+      <div class="event-section">
+        <label style="font-size: 11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Mark Day / Event</label>
+        <input type="text" id="eventNameInput" class="event-input" placeholder="Event Name (e.g., Birthday, Exam, Launch)..." />
+        <div class="pastel-palette" id="pastelPalette"></div>
+      </div>
+
+      <div class="event-section">
+        <label style="font-size: 11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Daily Notes</label>
+        <textarea id="noteInput" placeholder="Write daily thoughts or logs..."></textarea>
+      </div>
+
       <div class="modal-actions">
+        <button id="clearEventBtn" class="danger">Clear Event</button>
         <button id="closeModal">Cancel</button>
-        <button id="saveNote">Save Note</button>
+        <button id="saveNote">Save Changes</button>
       </div>
     </div>
   </div>
 
   <script>
     const TOTAL_DAYS = 365;
-    const MAX_BEADS = 120; // Prevents performance lag
+    const MAX_BEADS = 120;
     const PALETTE = ['#e63946', '#3a86ff', '#2ec4b6', '#ff006e', '#ffb703', '#8338ec', '#06d6a0'];
+    const PASTELS = [
+      { name: 'Mint', color: '#b7e4c7' },
+      { name: 'Rose', color: '#ffb5a7' },
+      { name: 'Sky', color: '#a2d2ff' },
+      { name: 'Lavender', color: '#cdb4db' },
+      { name: 'Peach', color: '#fec5bb' }
+    ];
 
     function formatDateKey(d) {
       const year = d.getFullYear();
@@ -235,15 +281,18 @@
     todayDate.setHours(0, 0, 0, 0);
     const todayKey = formatDateKey(todayDate);
 
-    let clickers = JSON.parse(localStorage.getItem('vast_clickers_v4')) || [
+    let clickers = JSON.parse(localStorage.getItem('vast_clickers_v5')) || [
       { id: 'c1', name: 'Effort', color: PALETTE[0] },
       { id: 'c2', name: 'Focus', color: PALETTE[1] }
     ];
-    let effortData = JSON.parse(localStorage.getItem('vast_effort_multi_v4')) || {};
-    let notesData = JSON.parse(localStorage.getItem('vast_notes_data')) || {};
+    let effortData = JSON.parse(localStorage.getItem('vast_effort_multi_v5')) || {};
+    let notesData = JSON.parse(localStorage.getItem('vast_notes_data_v5')) || {};
+    let eventsData = JSON.parse(localStorage.getItem('vast_events_data_v5')) || {};
     let activeSpell = 'none';
 
-    // Mouse Tracking for gravity
+    let selectedPastel = PASTELS[0].color;
+
+    // Mouse Tracking
     const mouse = { x: -1000, y: -1000 };
     window.addEventListener('mousemove', (e) => {
       mouse.x = e.clientX;
@@ -257,15 +306,14 @@
       timeline.push(d);
     }
 
-    // Dynamic Sound Throttling & Audio Pooling
+    // Audio Engine
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     let lastSoundTime = 0;
     let activeVoices = 0;
-    const MAX_VOICES = 3; // Maximum simultaneous sound channels
+    const MAX_VOICES = 3;
 
     function playWaterDropSound(pitchShift = 1, volume = 0.04) {
       const now = performance.now();
-      // Prevents audio overlap/distortion (min 40ms interval & max 3 voices)
       if (now - lastSoundTime < 40 || activeVoices >= MAX_VOICES) return;
       
       lastSoundTime = now;
@@ -289,12 +337,11 @@
       osc.start();
       osc.stop(audioCtx.currentTime + 0.035);
 
-      osc.onended = () => {
-        activeVoices = Math.max(0, activeVoices - 1);
-      };
+      osc.onended = () => { activeVoices = Math.max(0, activeVoices - 1); };
     }
 
-    // DOM References
+    // DOM Elements
+    const statsBar = document.getElementById('statsBar');
     const monthsContainer = document.getElementById('monthsContainer');
     const clickersWrapper = document.getElementById('clickersWrapper');
     const addClickerBtn = document.getElementById('addClickerBtn');
@@ -302,17 +349,80 @@
 
     const hoverCard = document.getElementById('statsHoverCard');
     const popDate = document.getElementById('popDate');
+    const popEvent = document.getElementById('popEvent');
     const popTotal = document.getElementById('popTotal');
     const popList = document.getElementById('popList');
     const popNote = document.getElementById('popNote');
 
     const noteModal = document.getElementById('noteModal');
     const modalDate = document.getElementById('modalDate');
+    const eventNameInput = document.getElementById('eventNameInput');
+    const pastelPalette = document.getElementById('pastelPalette');
     const noteInput = document.getElementById('noteInput');
     const closeModal = document.getElementById('closeModal');
     const saveNote = document.getElementById('saveNote');
+    const clearEventBtn = document.getElementById('clearEventBtn');
 
     let activeKeyForNote = null;
+
+    // Render Pastel Colors in Modal
+    PASTELS.forEach((p, idx) => {
+      const chip = document.createElement('div');
+      chip.classList.add('pastel-chip');
+      if (idx === 0) chip.classList.add('selected');
+      chip.style.backgroundColor = p.color;
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.pastel-chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+        selectedPastel = p.color;
+      });
+      pastelPalette.appendChild(chip);
+    });
+
+    function updateStatsBar() {
+      // Days till new year
+      const nextNY = new Date(todayDate.getFullYear() + 1, 0, 1);
+      const diffNY = Math.ceil((nextNY - todayDate) / (1000 * 60 * 60 * 24));
+
+      // Calculate upcoming user events
+      let upcomingStatsHTML = '';
+      const upcomingEvents = [];
+
+      Object.keys(eventsData).forEach(k => {
+        const evDate = new Date(k + 'T00:00:00');
+        const diffDays = Math.ceil((evDate - todayDate) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0 && eventsData[k].name) {
+          upcomingEvents.push({ name: eventsData[k].name, days: diffDays, color: eventsData[k].color });
+        }
+      });
+
+      upcomingEvents.sort((a, b) => a.days - b.days);
+
+      upcomingEvents.slice(0, 2).forEach(ev => {
+        upcomingStatsHTML += `
+          <div class="stat-item">
+            <div class="stat-val" style="color:${ev.color};">${ev.days}d</div>
+            <div class="stat-lbl">TILL ${ev.name.toUpperCase()}</div>
+          </div>
+        `;
+      });
+
+      statsBar.innerHTML = `
+        <div class="stat-item">
+          <div class="stat-val">0d</div>
+          <div class="stat-lbl">DAYS PASSED FROM START</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">${diffNY}d</div>
+          <div class="stat-lbl">TILL NEW YEAR</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">365d</div>
+          <div class="stat-lbl">TILL NEXT YEAR TODAY</div>
+        </div>
+        ${upcomingStatsHTML}
+      `;
+    }
 
     function getDayTotalClicks(key) {
       if (!effortData[key]) return 0;
@@ -365,7 +475,12 @@
         if (isNewYear) slot.classList.add('new-year');
         if (notesData[key] && notesData[key].trim() !== '') slot.classList.add('has-note');
 
-        if (totalClicks > 0 && effortData[key]) {
+        // Render Pastel Custom Events
+        if (eventsData[key]) {
+          slot.style.backgroundColor = eventsData[key].color;
+          slot.style.borderColor = 'transparent';
+          slot.style.boxShadow = `0 0 6px ${eventsData[key].color}aa`;
+        } else if (totalClicks > 0 && effortData[key]) {
           let dominantColor = clickers[0].color;
           let maxVal = -1;
           clickers.forEach(c => {
@@ -378,7 +493,16 @@
         }
 
         slot.addEventListener('mouseenter', () => {
-          popDate.textContent = key + (isNewYear ? ' 🎉 New Year!' : '');
+          popDate.textContent = key + (isNewYear ? ' - New Year' : '');
+          
+          if (eventsData[key]) {
+            popEvent.style.display = 'block';
+            popEvent.style.color = eventsData[key].color;
+            popEvent.textContent = `Event: ${eventsData[key].name}`;
+          } else {
+            popEvent.style.display = 'none';
+          }
+
           popTotal.textContent = `Total Clicks: ${totalClicks}`;
           
           popList.innerHTML = '';
@@ -416,13 +540,22 @@
 
         slot.addEventListener('click', () => {
           activeKeyForNote = key;
-          modalDate.textContent = `Notes for ${key}`;
+          modalDate.textContent = `Day Settings - ${key}`;
           noteInput.value = notesData[key] || '';
+          eventNameInput.value = (eventsData[key] && eventsData[key].name) || '';
+          selectedPastel = (eventsData[key] && eventsData[key].color) || PASTELS[0].color;
+          
+          document.querySelectorAll('.pastel-chip').forEach(chip => {
+            chip.classList.toggle('selected', chip.style.backgroundColor === selectedPastel);
+          });
+
           noteModal.classList.add('active');
         });
 
         monthGrid.appendChild(slot);
       });
+
+      updateStatsBar();
     }
 
     function renderClickers() {
@@ -441,8 +574,8 @@
           </div>
           <div class="clicker-controls">
             <span class="clicker-name" title="${c.name}">${c.name}</span>
-            <button class="rename-btn" data-id="${c.id}" style="padding:2px 5px; font-size:9px;">✎</button>
-            ${clickers.length > 1 ? `<button class="danger delete-btn" data-id="${c.id}" style="padding:2px 5px; font-size:9px;">✕</button>` : ''}
+            <button class="rename-btn" data-id="${c.id}" style="padding:2px 5px; font-size:9px;">edit</button>
+            ${clickers.length > 1 ? `<button class="danger delete-btn" data-id="${c.id}" style="padding:2px 5px; font-size:9px;">del</button>` : ''}
           </div>
         `;
 
@@ -453,13 +586,12 @@
           if (!effortData[todayKey]) effortData[todayKey] = {};
           effortData[todayKey][c.id] = (effortData[todayKey][c.id] || 0) + 1;
           
-          localStorage.setItem('vast_effort_multi_v4', JSON.stringify(effortData));
+          localStorage.setItem('vast_effort_multi_v5', JSON.stringify(effortData));
 
           const rect = btn.getBoundingClientRect();
           const spawnX = rect.left + rect.width / 2;
           const spawnY = rect.top + rect.height / 2;
           
-          // Spawn small glass beads and enforce hard particle cap
           for (let i = 0; i < 2; i++) {
             beads.push(new GlassBead(spawnX, spawnY, c.color));
           }
@@ -473,7 +605,7 @@
           const newName = prompt('Rename clicker:', c.name);
           if (newName && newName.trim() !== '') {
             c.name = newName.trim();
-            localStorage.setItem('vast_clickers_v4', JSON.stringify(clickers));
+            localStorage.setItem('vast_clickers_v5', JSON.stringify(clickers));
             renderClickers();
             renderGrid();
           }
@@ -484,7 +616,7 @@
           delBtn.addEventListener('click', () => {
             if (confirm(`Delete "${c.name}"?`)) {
               clickers = clickers.filter(item => item.id !== c.id);
-              localStorage.setItem('vast_clickers_v4', JSON.stringify(clickers));
+              localStorage.setItem('vast_clickers_v5', JSON.stringify(clickers));
               renderClickers();
               renderGrid();
             }
@@ -501,7 +633,7 @@
         const newId = 'c_' + Date.now();
         const color = PALETTE[clickers.length % PALETTE.length];
         clickers.push({ id: newId, name: name.trim(), color: color });
-        localStorage.setItem('vast_clickers_v4', JSON.stringify(clickers));
+        localStorage.setItem('vast_clickers_v5', JSON.stringify(clickers));
         renderClickers();
         renderGrid();
       }
@@ -510,14 +642,35 @@
     saveNote.addEventListener('click', () => {
       if (activeKeyForNote) {
         notesData[activeKeyForNote] = noteInput.value;
-        localStorage.setItem('vast_notes_data', JSON.stringify(notesData));
+        localStorage.setItem('vast_notes_data_v5', JSON.stringify(notesData));
+
+        if (eventNameInput.value.trim() !== '') {
+          eventsData[activeKeyForNote] = {
+            name: eventNameInput.value.trim(),
+            color: selectedPastel
+          };
+        } else {
+          delete eventsData[activeKeyForNote];
+        }
+        localStorage.setItem('vast_events_data_v5', JSON.stringify(eventsData));
+
         noteModal.classList.remove('active');
         renderGrid();
       }
     });
+
+    clearEventBtn.addEventListener('click', () => {
+      if (activeKeyForNote) {
+        delete eventsData[activeKeyForNote];
+        localStorage.setItem('vast_events_data_v5', JSON.stringify(eventsData));
+        eventNameInput.value = '';
+        renderGrid();
+      }
+    });
+
     closeModal.addEventListener('click', () => noteModal.classList.remove('active'));
 
-    // Canvas & Physics
+    // Physics Engine
     const canvas = document.getElementById('physicsCanvas');
     const ctx = canvas.getContext('2d');
     let beads = [];
@@ -583,7 +736,6 @@
         this.x += this.vx;
         this.y += this.vy;
 
-        // Screen Boundary Collisions
         if (this.y + this.radius > canvas.height) {
           this.y = canvas.height - this.radius;
           this.vy *= -this.bounce;
@@ -621,7 +773,6 @@
       }
     }
 
-    // Optimized Particle Collision Resolution
     function resolveBeadCollisions() {
       const len = beads.length;
       for (let i = 0; i < len; i++) {
@@ -662,9 +813,7 @@
 
     function animatePhysics() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
       resolveBeadCollisions();
-
       for (let i = beads.length - 1; i >= 0; i--) {
         const b = beads[i];
         b.update();
@@ -674,7 +823,6 @@
     }
     animatePhysics();
 
-    // Spell Mode Triggers
     const spells = {
       none: document.getElementById('spellNone'),
       hole: document.getElementById('spellHole'),
@@ -694,7 +842,7 @@
     resetBtn.addEventListener('click', () => {
       if (effortData[todayKey]) {
         effortData[todayKey] = {};
-        localStorage.setItem('vast_effort_multi_v4', JSON.stringify(effortData));
+        localStorage.setItem('vast_effort_multi_v5', JSON.stringify(effortData));
         renderClickers();
         renderGrid();
       }
