@@ -24,7 +24,7 @@
       background-color: var(--bg);
       color: var(--text-main);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      overflow: hidden;
+      overflow-x: hidden;
       display: flex; flex-direction: column; align-items: center; justify-content: space-between;
       user-select: none;
     }
@@ -44,19 +44,19 @@
 
     .stats-bar {
       width: 100%; background: var(--card-bg); border: 1px solid var(--card-border);
-      border-radius: 6px; padding: 8px 14px; display: flex; gap: 16px;
-      align-items: center; justify-content: space-around; flex-wrap: wrap;
+      border-radius: 6px; padding: 10px 14px; display: flex; gap: 16px 24px;
+      align-items: center; justify-content: center; flex-wrap: wrap;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
-    .stat-item { display: flex; flex-direction: column; align-items: center; }
+    .stat-item { display: flex; flex-direction: column; align-items: center; min-width: 100px; }
     .stat-val { font-size: 14px; font-weight: 800; color: #3a86ff; }
-    .stat-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+    .stat-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; text-align: center; }
 
     .controls {
       display: flex; gap: 8px; align-items: center; width: 100%; justify-content: space-between;
       flex-wrap: wrap;
     }
-    .spell-group, .sys-group { display: flex; gap: 6px; }
+    .spell-group, .sys-group { display: flex; gap: 6px; flex-wrap: wrap; }
 
     button {
       background: var(--btn-bg); color: var(--btn-text);
@@ -113,7 +113,7 @@
     .center-stage {
       position: relative; z-index: 10;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      flex-grow: 1; width: 100%;
+      flex-grow: 1; width: 100%; margin: 20px 0;
     }
 
     .clickers-wrapper {
@@ -171,7 +171,7 @@
       background: var(--bg); color: var(--text-main); border: 1px solid var(--slot-border);
       padding: 8px; border-radius: 4px; outline: none; font-size: 12px;
     }
-    .pastel-palette { display: flex; gap: 8px; }
+    .pastel-palette { display: flex; gap: 8px; flex-wrap: wrap; }
     .pastel-chip {
       width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
       border: 2px solid transparent; transition: transform 0.15s ease;
@@ -257,12 +257,19 @@
     const TOTAL_DAYS = 365;
     const MAX_BEADS = 120;
     const PALETTE = ['#e63946', '#3a86ff', '#2ec4b6', '#ff006e', '#ffb703', '#8338ec', '#06d6a0'];
+    
+    // Expanded 10 Pastel Palette Options
     const PASTELS = [
       { name: 'Mint', color: '#b7e4c7' },
       { name: 'Rose', color: '#ffb5a7' },
       { name: 'Sky', color: '#a2d2ff' },
       { name: 'Lavender', color: '#cdb4db' },
-      { name: 'Peach', color: '#fec5bb' }
+      { name: 'Peach', color: '#fec5bb' },
+      { name: 'Lemon', color: '#fcf6bd' },
+      { name: 'Lilac', color: '#e7c6ff' },
+      { name: 'Seafoam', color: '#d8f3dc' },
+      { name: 'Apricot', color: '#ffd6a5' },
+      { name: 'Periwinkle', color: '#c8b6ff' }
     ];
 
     function formatDateKey(d) {
@@ -284,9 +291,7 @@
     let notesData = JSON.parse(localStorage.getItem('vast_notes_data_v5')) || {};
     let eventsData = JSON.parse(localStorage.getItem('vast_events_data_v5')) || {};
     
-    // Active spell regimes set
     const activeSpells = new Set();
-
     let selectedPastel = PASTELS[0].color;
 
     const mouse = { x: -1000, y: -1000 };
@@ -364,6 +369,7 @@
       chip.classList.add('pastel-chip');
       if (idx === 0) chip.classList.add('selected');
       chip.style.backgroundColor = p.color;
+      chip.title = p.name;
       chip.addEventListener('click', () => {
         document.querySelectorAll('.pastel-chip').forEach(c => c.classList.remove('selected'));
         chip.classList.add('selected');
@@ -389,7 +395,8 @@
 
       upcomingEvents.sort((a, b) => a.days - b.days);
 
-      upcomingEvents.slice(0, 2).forEach(ev => {
+      // Render ALL custom events without truncating
+      upcomingEvents.forEach(ev => {
         upcomingStatsHTML += `
           <div class="stat-item">
             <div class="stat-val" style="color:${ev.color};">${ev.days}d</div>
@@ -687,7 +694,6 @@
         const cx = window.innerWidth / 2;
         const cy = window.innerHeight / 2;
 
-        // Cumulative Physics Forces for Multi-Regimes
         if (activeSpells.has('hole')) {
           const dx = cx - this.x;
           const dy = cy - this.y;
@@ -710,7 +716,7 @@
         }
 
         if (!activeSpells.has('fire')) {
-          this.vy += 0.35; // Standard gravity if fire is off
+          this.vy += 0.35;
         }
 
         if (activeSpells.has('freeze')) {
@@ -819,7 +825,6 @@
     }
     animatePhysics();
 
-    // Multi-Select Spell Buttons
     const spells = {
       none: document.getElementById('spellNone'),
       hole: document.getElementById('spellHole'),
