@@ -35,7 +35,6 @@
       pointer-events: none; z-index: 1;
     }
 
-    /* Top Section */
     .top-container {
       position: relative; z-index: 10;
       width: 95%; max-width: 1200px;
@@ -43,7 +42,6 @@
       margin-top: 14px;
     }
 
-    /* Top Stats Bar */
     .stats-bar {
       width: 100%; background: var(--card-bg); border: 1px solid var(--card-border);
       border-radius: 6px; padding: 8px 14px; display: flex; gap: 16px;
@@ -112,7 +110,6 @@
     }
     .slot:hover { transform: scale(1.3); z-index: 15; }
 
-    /* Center Section */
     .center-stage {
       position: relative; z-index: 10;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -143,7 +140,6 @@
       max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
 
-    /* Hover Stats Popup */
     #statsHoverCard {
       position: fixed; display: none; z-index: 200; pointer-events: none;
       background: var(--pop-bg); border: 1px solid var(--card-border);
@@ -157,7 +153,6 @@
     #statsHoverCard .pop-bar { height: 4px; border-radius: 2px; transition: width 0.3s; }
     #statsHoverCard .pop-note { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--card-border); font-size: 10px; font-style: italic; color: var(--text-main); }
 
-    /* Modal Overlay */
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
@@ -288,11 +283,12 @@
     let effortData = JSON.parse(localStorage.getItem('vast_effort_multi_v5')) || {};
     let notesData = JSON.parse(localStorage.getItem('vast_notes_data_v5')) || {};
     let eventsData = JSON.parse(localStorage.getItem('vast_events_data_v5')) || {};
-    let activeSpell = 'none';
+    
+    // Active spell regimes set
+    const activeSpells = new Set();
 
     let selectedPastel = PASTELS[0].color;
 
-    // Mouse Tracking
     const mouse = { x: -1000, y: -1000 };
     window.addEventListener('mousemove', (e) => {
       mouse.x = e.clientX;
@@ -306,7 +302,6 @@
       timeline.push(d);
     }
 
-    // Audio Engine
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     let lastSoundTime = 0;
     let activeVoices = 0;
@@ -340,7 +335,6 @@
       osc.onended = () => { activeVoices = Math.max(0, activeVoices - 1); };
     }
 
-    // DOM Elements
     const statsBar = document.getElementById('statsBar');
     const monthsContainer = document.getElementById('monthsContainer');
     const clickersWrapper = document.getElementById('clickersWrapper');
@@ -365,7 +359,6 @@
 
     let activeKeyForNote = null;
 
-    // Render Pastel Colors in Modal
     PASTELS.forEach((p, idx) => {
       const chip = document.createElement('div');
       chip.classList.add('pastel-chip');
@@ -380,11 +373,9 @@
     });
 
     function updateStatsBar() {
-      // Days till new year
       const nextNY = new Date(todayDate.getFullYear() + 1, 0, 1);
       const diffNY = Math.ceil((nextNY - todayDate) / (1000 * 60 * 60 * 24));
 
-      // Calculate upcoming user events
       let upcomingStatsHTML = '';
       const upcomingEvents = [];
 
@@ -475,7 +466,6 @@
         if (isNewYear) slot.classList.add('new-year');
         if (notesData[key] && notesData[key].trim() !== '') slot.classList.add('has-note');
 
-        // Render Pastel Custom Events
         if (eventsData[key]) {
           slot.style.backgroundColor = eventsData[key].color;
           slot.style.borderColor = 'transparent';
@@ -670,7 +660,6 @@
 
     closeModal.addEventListener('click', () => noteModal.classList.remove('active'));
 
-    // Physics Engine
     const canvas = document.getElementById('physicsCanvas');
     const ctx = canvas.getContext('2d');
     let beads = [];
@@ -695,31 +684,38 @@
       }
 
       update() {
-        if (activeSpell === 'hole') {
-          const cx = window.innerWidth / 2;
-          const cy = window.innerHeight / 2;
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+
+        // Cumulative Physics Forces for Multi-Regimes
+        if (activeSpells.has('hole')) {
           const dx = cx - this.x;
           const dy = cy - this.y;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
           this.vx += (dx / dist) * 0.7;
           this.vy += (dy / dist) * 0.7;
-          this.vx *= 0.94; this.vy *= 0.94;
-        } else if (activeSpell === 'tornado') {
-          const cx = window.innerWidth / 2;
-          const cy = window.innerHeight / 2;
+          this.vx *= 0.95; this.vy *= 0.95;
+        }
+
+        if (activeSpells.has('tornado')) {
           const dx = this.x - cx;
           const dy = this.y - cy;
           this.vx += -dy * 0.02;
-          this.vy += dx * 0.02 - 0.18;
-        } else if (activeSpell === 'freeze') {
-          this.vx *= 0.85;
-          this.vy *= 0.85;
-          this.vy += 0.05;
-        } else if (activeSpell === 'fire') {
-          this.vy -= 0.35;
+          this.vy += dx * 0.02 - 0.12;
+        }
+
+        if (activeSpells.has('fire')) {
+          this.vy -= 0.45;
           this.vx += (Math.random() - 0.5) * 0.4;
-        } else {
-          this.vy += 0.35;
+        }
+
+        if (!activeSpells.has('fire')) {
+          this.vy += 0.35; // Standard gravity if fire is off
+        }
+
+        if (activeSpells.has('freeze')) {
+          this.vx *= 0.82;
+          this.vy *= 0.82;
         }
 
         if (mouse.x > 0) {
@@ -741,7 +737,7 @@
           this.vy *= -this.bounce;
           this.vx *= 0.88;
           if (Math.abs(this.vy) > 1.8) playWaterDropSound(0.7, 0.03);
-        } else if (this.y - this.radius < 0 && activeSpell === 'fire') {
+        } else if (this.y - this.radius < 0 && activeSpells.has('fire')) {
           this.y = this.radius;
           this.vy *= -this.bounce;
         }
@@ -760,9 +756,9 @@
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         
         let drawColor = this.baseColor;
-        if (activeSpell === 'hole') drawColor = '#00f5d4';
-        else if (activeSpell === 'freeze') drawColor = '#90e0ef';
-        else if (activeSpell === 'fire') drawColor = '#ff4d6d';
+        if (activeSpells.has('freeze')) drawColor = '#90e0ef';
+        else if (activeSpells.has('fire')) drawColor = '#ff4d6d';
+        else if (activeSpells.has('hole')) drawColor = '#00f5d4';
 
         ctx.fillStyle = drawColor;
         ctx.shadowColor = drawColor;
@@ -823,6 +819,7 @@
     }
     animatePhysics();
 
+    // Multi-Select Spell Buttons
     const spells = {
       none: document.getElementById('spellNone'),
       hole: document.getElementById('spellHole'),
@@ -831,11 +828,27 @@
       fire: document.getElementById('spellFire')
     };
 
-    Object.keys(spells).forEach(key => {
+    spells.none.addEventListener('click', () => {
+      activeSpells.clear();
+      Object.values(spells).forEach(btn => btn.classList.remove('active'));
+      spells.none.classList.add('active');
+    });
+
+    ['hole', 'tornado', 'freeze', 'fire'].forEach(key => {
       spells[key].addEventListener('click', () => {
-        Object.values(spells).forEach(btn => btn.classList.remove('active'));
-        spells[key].classList.add('active');
-        activeSpell = key;
+        spells.none.classList.remove('active');
+
+        if (activeSpells.has(key)) {
+          activeSpells.delete(key);
+          spells[key].classList.remove('active');
+        } else {
+          activeSpells.add(key);
+          spells[key].classList.add('active');
+        }
+
+        if (activeSpells.size === 0) {
+          spells.none.classList.add('active');
+        }
       });
     });
 
