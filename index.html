@@ -2,2336 +2,706 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>CHRONO-DNA // Personal Evolution Lab + Audio Files + Firebase Auth & Leaderboard</title>
-  
-  <!-- FIREBASE SDKs (v10 Modular) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { 
-      getAuth, 
-      GoogleAuthProvider, 
-      signInWithPopup, 
-      signOut, 
-      onAuthStateChanged 
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { 
-      getFirestore, 
-      doc, 
-      setDoc, 
-      getDoc, 
-      collection, 
-      query, 
-      orderBy, 
-      limit, 
-      getDocs, 
-      serverTimestamp 
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyD9ITtErx2-nCg0-AeMMxxp5JNEmScmkGo",
-      authDomain: "neurobiome.firebaseapp.com",
-      projectId: "neurobiome",
-      storageBucket: "neurobiome.firebasestorage.app",
-      messagingSenderId: "767375064224",
-      appId: "1:767375064224:web:6c5c0347f067547ee01dc5",
-      measurementId: "G-SSQMF3WTTB"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const googleProvider = new GoogleAuthProvider();
-
-    window.FB_AUTH = auth;
-    window.FB_DB = db;
-    window.FB_GoogleProvider = googleProvider;
-    window.FB_signInWithPopup = signInWithPopup;
-    window.FB_signOut = signOut;
-    window.FB_doc = doc;
-    window.FB_setDoc = setDoc;
-    window.FB_getDoc = getDoc;
-    window.FB_collection = collection;
-    window.FB_query = query;
-    window.FB_orderBy = orderBy;
-    window.FB_limit = limit;
-    window.FB_getDocs = getDocs;
-    window.FB_serverTimestamp = serverTimestamp;
-
-    onAuthStateChanged(auth, async (user) => {
-      const authStatusSpan = document.getElementById('auth-status-text');
-      const loginBtn = document.getElementById('login-btn');
-      const logoutBtn = document.getElementById('logout-btn');
-      const leaderboardBtn = document.getElementById('leaderboard-btn');
-      const autoSyncStatus = document.getElementById('autosync-status-text');
-
-      if (user) {
-        window.currentFirebaseUser = user;
-        if (authStatusSpan) authStatusSpan.innerText = `LOGGED IN: ${user.displayName || user.email}`;
-        if (loginBtn) loginBtn.style.display = 'none';
-        if (logoutBtn) logoutBtn.style.display = 'inline-block';
-        if (leaderboardBtn) leaderboardBtn.style.display = 'inline-block';
-        if (autoSyncStatus) autoSyncStatus.style.display = 'inline-block';
-        
-        await loadUserDataFromCloud();
-      } else {
-        window.currentFirebaseUser = null;
-        if (authStatusSpan) authStatusSpan.innerText = 'STATUS: GUEST (LOCAL ONLY)';
-        if (loginBtn) loginBtn.style.display = 'inline-block';
-        if (logoutBtn) logoutBtn.style.display = 'none';
-        if (autoSyncStatus) autoSyncStatus.style.display = 'none';
-      }
-      updateHeaderPlayerProfile();
-    });
-  </script>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vast Space Tracker</title>
   <style>
-    body {
-      background-color: #020202;
-      color: #f0f0f0;
-      font-family: 'Courier New', Courier, monospace;
-      margin: 0;
-      padding: 10px;
-      display: flex;
-      justify-content: center;
+    :root {
+      --bg: #0a0a0c;
+      --card-bg: #121216;
+      --card-border: #24242e;
+      --text-main: #f0f0f5;
+      --text-muted: #8a8a9e;
+      --slot-border: #2b2b3b;
+      --slot-bg: #16161e;
+      --btn-bg: #16161e;
+      --btn-text: #f0f0f5;
+      --pop-bg: #16161e;
     }
-    .retro-window {
-      width: 1450px;
-      background: #0a0a0a;
-      border: 4px solid #ffffff;
-      box-shadow: 12px 12px 0px #1f1f1f;
-    }
-    .window-header {
-      background: #ffffff;
-      color: #000000;
-      padding: 8px 14px;
-      font-weight: bold;
-      font-size: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .window-body {
-      display: flex;
-      gap: 20px;
-      padding: 20px;
-    }
-    .panel {
-      flex: 1;
-      border: 1px dashed #555555;
-      padding: 15px;
-      background: #050505;
-    }
-    h3 {
-      font-size: 14px;
-      border-bottom: 2px solid #ffffff;
-      padding-bottom: 5px;
-      margin-top: 0;
-      color: #a3e635;
-    }
-    button {
-      background: #000000;
-      color: #ffffff;
-      border: 2px outset #ffffff;
-      padding: 8px 14px;
-      font-family: 'Courier New', Courier, monospace;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 6px;
-    }
-    button:active {
-      border-style: inset;
-      background: #222222;
-    }
-    input[type="text"], input[type="number"], select, input[type="color"] {
-      background: #000;
-      color: #fff;
-      border: 1px solid #fff;
-      padding: 5px;
-      font-family: 'Courier New', Courier, monospace;
-    }
-    input[type="color"] {
-      width: 32px;
-      height: 26px;
-      padding: 0;
-      cursor: pointer;
-      border: 1px solid #fff;
-      vertical-align: middle;
-    }
-    .habit-row {
-      display: flex;
-      flex-direction: column;
-      background: #111111;
-      padding: 8px 10px;
-      margin-bottom: 8px;
-      border: 1px solid #444;
-      font-size: 12px;
-      gap: 6px;
-    }
-    .habit-row-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .habit-row-bottom {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-    .nucleotide-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 10px 0;
-    }
-    .nucleotide-block {
-      width: 38px;
-      height: 38px;
-      border: 1px solid #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .folder-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-    .folder-card {
-      border: 1px solid #777;
-      background: #111;
-      padding: 6px;
-      text-align: center;
-      cursor: pointer;
-      font-size: 11px;
-    }
-    .folder-card:hover {
-      border-color: #a3e635;
-      background: #1a1a1a;
-    }
-    canvas {
-      border: 2px solid #ffffff;
-      background: #000000;
-      display: block;
-    }
-    .retro-modal {
-      display: none;
-      position: fixed;
-      top: 2%;
-      left: 2%;
-      width: 96%;
-      height: 96%;
-      background: #080808;
-      border: 4px solid #fff;
-      box-shadow: 14px 14px 0px #1a1a1a;
-      z-index: 100;
-      padding: 15px;
-      flex-direction: column;
-      justify-content: space-between;
-      box-sizing: border-box;
-    }
-    .matrix-split {
-      display: flex;
-      gap: 15px;
-      flex: 1;
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       overflow: hidden;
-      width: 100%;
-    }
-    .matrix-pane {
-      border: 1px dashed #777;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      box-sizing: border-box;
-    }
-    .stat-pos { color: #a3e635; font-weight: bold; }
-    .stat-neg { color: #f87171; font-weight: bold; }
-    
-    .compact-stats-row {
-      display: flex;
-      gap: 10px;
-      width: 100%;
-      margin-top: 10px;
-      box-sizing: border-box;
-      flex-wrap: wrap;
-    }
-    .compact-stat-card {
-      flex: 1;
-      min-width: 150px;
-      border: 1px solid #444;
-      background: #0d0d0d;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .compact-stat-card .metrics-list {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 12px;
-      margin-top: 8px;
-      margin-bottom: 8px;
-    }
-    .leaderboard-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 12px;
-    }
-    .leaderboard-table th, .leaderboard-table td {
-      border: 1px solid #444;
-      padding: 8px;
-      text-align: left;
-    }
-    .leaderboard-table th {
-      background: #111;
-      color: #a3e635;
-    }
-    
-    .emoji-picker-container {
-      display: none;
-      flex-direction: column;
-      background: #0f0f0f;
-      border: 2px solid #fff;
-      padding: 10px;
-      margin-top: 8px;
-      box-shadow: 6px 6px 0px #222;
-    }
-    .emoji-categories-tabs {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-    .emoji-category-tab {
-      background: #1a1a1a;
-      color: #ccc;
-      border: 1px solid #555;
-      font-size: 10px;
-      padding: 4px 8px;
-      cursor: pointer;
-    }
-    .emoji-category-tab.active {
-      background: #a3e635;
-      color: #000;
-      border-color: #fff;
-      font-weight: bold;
-    }
-    .emoji-grid {
-      display: grid;
-      grid-template-columns: repeat(10, 1fr);
-      gap: 4px;
-      max-height: 220px;
-      overflow-y: auto;
-      background: #000;
-      border: 1px solid #555;
-      padding: 6px;
-    }
-    .emoji-cell {
-      font-size: 22px;
-      text-align: center;
-      cursor: pointer;
-      padding: 4px;
-      border: 1px solid transparent;
+      display: flex; flex-direction: column; align-items: center; justify-content: space-between;
       user-select: none;
     }
-    .emoji-cell:hover {
-      background: #222;
-      border-color: #a3e635;
+
+    #physicsCanvas {
+      position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none; z-index: 1;
     }
-    .emoji-cell.selected {
-      background: #113;
-      border-color: #60a5fa;
+
+    /* Top Section */
+    .top-container {
+      position: relative; z-index: 10;
+      width: 95%; max-width: 1200px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      margin-top: 16px;
     }
+
+    .controls {
+      display: flex; gap: 8px; align-items: center; width: 100%; justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .spell-group, .sys-group { display: flex; gap: 6px; }
+
+    button {
+      background: var(--btn-bg); color: var(--btn-text);
+      border: 1.5px solid var(--card-border); padding: 6px 12px;
+      font-weight: 600; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;
+      cursor: pointer; transition: all 0.2s ease; border-radius: 4px;
+    }
+    button:hover { background: var(--text-main); color: var(--bg); }
+    button.active { border-color: #3a86ff; box-shadow: 0 0 8px rgba(58, 134, 255, 0.5); }
+    button.danger:hover { background: #e63946; color: #fff; border-color: #e63946; }
+
+    .calendar-card {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px;
+      padding: 14px; width: 100%; overflow-x: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .calendar-body { display: flex; gap: 14px; align-items: flex-start; }
+
+    .days-sidebar {
+      display: grid; grid-template-rows: repeat(7, 13px); gap: 3px;
+      font-size: 9px; font-weight: 700; color: var(--text-muted); line-height: 13px;
+      margin-top: 22px; width: 26px; flex-shrink: 0;
+    }
+
+    .months-container { display: flex; gap: 10px; flex-grow: 1; }
+    .month-block { display: flex; flex-direction: column; gap: 6px; }
+
+    .month-title {
+      font-size: 11px; font-weight: 700; color: var(--text-main); text-transform: uppercase;
+      height: 16px; line-height: 16px; text-align: left;
+    }
+
+    .month-grid {
+      display: grid; grid-template-rows: repeat(7, 13px);
+      grid-auto-flow: column; grid-auto-columns: 13px; gap: 3px;
+    }
+
+    .slot {
+      width: 13px; height: 13px;
+      border: 1px solid var(--slot-border); background-color: var(--slot-bg);
+      border-radius: 2px; transition: transform 0.15s ease, border-color 0.2s ease;
+      position: relative; box-sizing: border-box; cursor: pointer;
+    }
+
+    .slot.today { border: 2px solid #ffffff !important; }
+    .slot.new-year { border: 2px solid #e63946 !important; }
+    .slot.has-note::before {
+      content: ''; position: absolute; bottom: 1px; left: 1px;
+      width: 3px; height: 3px; background-color: #ffffff; border-radius: 50%;
+    }
+    .slot:hover { transform: scale(1.3); z-index: 15; }
+
+    /* Center Section - Clickers */
+    .center-stage {
+      position: relative; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      flex-grow: 1; width: 100%;
+    }
+
+    .clickers-wrapper {
+      display: flex; gap: 32px; align-items: center; justify-content: center;
+      flex-wrap: wrap; width: 100%; max-width: 900px;
+    }
+
+    .clicker-card {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+
+    .clicker-btn {
+      width: 110px; height: 110px; border-radius: 50%;
+      background: var(--card-bg); border: 3px solid #ffffff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; transition: transform 0.05s ease, box-shadow 0.2s ease;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    }
+    .clicker-btn:active { transform: scale(0.92); }
+    .click-val { font-size: 28px; font-weight: 800; color: var(--text-main); }
+
+    .clicker-controls { display: flex; gap: 4px; align-items: center; }
+    .clicker-name {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-main); text-align: center;
+      max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* Hover Stats Popup */
+    #statsHoverCard {
+      position: fixed; display: none; z-index: 200; pointer-events: none;
+      background: var(--pop-bg); border: 1px solid var(--card-border);
+      padding: 12px; border-radius: 6px; width: 230px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    #statsHoverCard .pop-date { font-size: 11px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
+    #statsHoverCard .pop-total { font-size: 10px; font-weight: 700; color: #8a8a9e; margin-bottom: 8px; }
+    #statsHoverCard .pop-list { font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+    #statsHoverCard .pop-bar { height: 4px; border-radius: 2px; transition: width 0.3s; }
+    #statsHoverCard .pop-note { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--card-border); font-size: 10px; font-style: italic; color: var(--text-main); }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; z-index: 300;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--card-bg); border: 1.5px solid var(--card-border);
+      padding: 24px; border-radius: 8px; width: 500px; max-width: 90%;
+      display: flex; flex-direction: column; gap: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+    }
+    .modal-header { font-size: 16px; font-weight: 800; color: var(--text-main); }
+    .modal textarea {
+      width: 100%; height: 180px; background: var(--bg); color: var(--text-main);
+      border: 1px solid var(--slot-border); padding: 12px; border-radius: 6px;
+      resize: vertical; font-family: inherit; font-size: 13px; outline: none; line-height: 1.4;
+    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
   </style>
 </head>
 <body>
 
-  <audio id="sound1" src="sound1.mp3" preload="auto"></audio>
-  <audio id="sound2" src="sound2.mp3" preload="auto"></audio>
-  <audio id="sound3" src="sound3.mp3" preload="auto"></audio>
+  <canvas id="physicsCanvas"></canvas>
 
-  <input type="file" id="import-file-input" style="display: none;" accept=".json" onchange="importJSONBackup(event)">
-
-  <!-- LEADERBOARD MODAL -->
-  <div id="leaderboard-modal" class="retro-modal">
-    <h3>PUBLIC EVOLUTIONARY LEADERBOARD (SORTED BY ISLANDS EATEN)</h3>
-    <div style="flex: 1; overflow-y: auto; margin-top: 10px;">
-      <p style="font-size: 11px; color: #aaa;">Compare ecosystem populations, habits, miniatures, and islands consumed across all researchers worldwide who opted in.</p>
-      <table class="leaderboard-table">
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>Researcher</th>
-            <th>Islands Eaten</th>
-            <th>Total Population</th>
-            <th>Month 1 Biome & Habit Stats</th>
-            <th>Last Updated</th>
-          </tr>
-        </thead>
-        <tbody id="leaderboard-tbody">
-          <tr><td colspan="6" style="text-align:center; color:#777;">Loading leaderboard ranks...</td></tr>
-        </tbody>
-      </table>
+  <div class="top-container">
+    <div class="controls">
+      <div class="spell-group">
+        <button id="spellNone" class="active">Normal</button>
+        <button id="spellHole">🌀 Black Hole</button>
+        <button id="spellTornado">🌪️ Tornado</button>
+        <button id="spellFreeze">❄️ Freeze</button>
+        <button id="spellFire">🔥 Fire</button>
+      </div>
+      <div class="sys-group">
+        <button id="addClickerBtn">+ Add Clicker</button>
+        <button id="resetDay">Reset Today</button>
+      </div>
     </div>
-    <div style="margin-top: 10px; border-top: 1px dashed #555; padding-top: 8px; display: flex; justify-content: flex-end;">
-      <button onclick="playSound('sound3'); toggleLeaderboard(false)" style="padding:6px 14px;">CLOSE LEADERBOARD</button>
+
+    <div class="calendar-card">
+      <div class="calendar-body">
+        <div class="days-sidebar">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+        <div class="months-container" id="monthsContainer"></div>
+      </div>
     </div>
   </div>
 
-  <!-- PERSONAL SETTINGS & CABINET MODAL -->
-  <div id="settings-modal" class="retro-modal" style="width: 620px; height: 580px; margin: auto; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-    <h3>PERSONAL SETTINGS & EVOLUTION CABINET</h3>
-    <div style="flex: 1; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 14px; font-size: 12px; padding-right: 4px;">
-      
-      <div>
-        <label style="display:block; margin-bottom:4px; color:#a3e635;"><b>Researcher Nickname:</b> <span id="settings-cooldown-notice" style="font-size:10px; color:#fbbf24; font-weight:normal;"></span></label>
-        <input type="text" id="settings-nickname-input" style="width: 100%; box-sizing: border-box;" placeholder="Enter custom researcher alias">
-        <div style="font-size: 10px; color: #888; margin-top: 3px;">Note: Username updates are limited to once every 14 days.</div>
-      </div>
-
-      <div>
-        <label style="display:block; margin-bottom:4px; color:#a3e635;"><b>Choose Avatar Symbol:</b></label>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <input type="hidden" id="settings-avatar-input" value="🧬">
-          <div id="settings-avatar-preview" style="font-size: 28px; background: #000; border: 1px solid #fff; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">🧬</div>
-          <button type="button" onclick="playSound('sound1'); toggleEmojiPickerDropdown()" style="padding: 6px 12px; background: #111; color: #a3e635; border: 1px solid #a3e635;">[ SELECT FROM FULL EMOJI LIBRARY ]</button>
-        </div>
-
-        <div id="emoji-picker-dropdown" class="emoji-picker-container">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span style="font-size: 11px; color: #a3e635;"><b>Full Unicode Emoji Library (Select One)</b></span>
-            <button type="button" onclick="toggleEmojiPickerDropdown()" style="margin:0; padding:1px 6px; font-size:10px;">X CLOSE</button>
-          </div>
-          <div id="emoji-categories-tabs" class="emoji-categories-tabs"></div>
-          <div id="emoji-grid" class="emoji-grid"></div>
-        </div>
-      </div>
-
-      <div style="border-top: 1px dashed #444; padding-top: 10px;">
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-          <input type="checkbox" id="settings-share-habits" style="accent-color: #a3e635;">
-          <span><b>Share habits you're tracking and your progress publicly</b></span>
-        </label>
-      </div>
-
-      <div>
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-          <input type="checkbox" id="settings-show-biome" style="accent-color: #a3e635;" checked>
-          <span><b>Show your MONTH 1 biome in miniature near username & leaderboard</b></span>
-        </label>
-      </div>
-
-    </div>
-    <div style="margin-top: 10px; border-top: 1px dashed #555; padding-top: 8px; display: flex; justify-content: flex-end; gap: 8px;">
-      <button onclick="savePersonalSettings()" style="padding:6px 14px; background:#111; color:#a3e635; border:1px solid #a3e635;">SAVE & APPLY</button>
-      <button onclick="playSound('sound3'); toggleSettingsModal(false)" style="padding:6px 14px;">CLOSE</button>
-    </div>
+  <div class="center-stage">
+    <div class="clickers-wrapper" id="clickersWrapper"></div>
   </div>
 
-  <div class="retro-window">
-    <div class="window-header">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <span>SYSTEM://CHRONO_EVOLUTION_LAB.EXE</span>
-        <div id="header-user-display" style="display: flex; align-items: center; gap: 6px; background: #000; color: #fff; padding: 2px 8px; border: 1px solid #777; font-size: 11px; cursor: pointer;" onclick="openSettingsModal()" title="Click to open Personal Cabinet Settings">
-          <span id="header-avatar">🧬</span>
-          <span id="header-nickname" style="color: #a3e635; font-weight: bold;" title="Hover to view previous names">Researcher</span>
-          <span style="color: #777;">|</span>
-          <span>Pop: <b id="header-stat-pop" style="color: #34d399;">0</b></span>
-          <span>Eaten: <b id="header-stat-eaten" style="color: #fbbf24;">0</b></span>
-          <canvas id="header-biome-mini" width="36" height="18" style="border: 1px solid #555; background: #000; vertical-align: middle; display: none;"></canvas>
-        </div>
-      </div>
-      <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-        <span id="auth-status-text" style="font-size:10px; color:#fbbf24; margin-right:4px;">STATUS: GUEST</span>
-        <span id="autosync-status-text" style="font-size:10px; color:#34d399; margin-right:4px; display:none;">[ AUTO-SYNCING 5S ]</span>
-        <button id="login-btn" onclick="loginWithGoogle()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#fbbf24; border:1px solid #fbbf24;">[ GOOGLE LOGIN ]</button>
-        <button id="logout-btn" onclick="logoutFirebase()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#f87171; border:1px solid #f87171; display:none;">[ LOGOUT ]</button>
-        <button id="leaderboard-btn" onclick="openLeaderboard()" style="margin:0; padding:2px 6px; font-size:10px; background:#000; color:#a3e635; border:1px solid #a3e635; display:none;">[ LEADERBOARD ]</button>
-
-        <button onclick="openSettingsModal()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#60a5fa; border:1px solid #60a5fa;">[ CABINET ]</button>
-        <button onclick="exportJSONBackup()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#a3e635; border:1px solid #a3e635;">[ EXPORT JSON ]</button>
-        <button onclick="document.getElementById('import-file-input').click()" style="margin:0; padding:2px 8px; font-size:11px; background:#000; color:#60a5fa; border:1px solid #60a5fa;">[ IMPORT JSON ]</button>
-        <span style="margin-left: 10px;">[_-X]</span>
-      </div>
-    </div>
-    
-    <div class="window-body">
-      <!-- LEFT COLUMN -->
-      <section class="panel">
-        <h3>1. PUBLIC HABIT & MORPHOLOGY CONFIG</h3>
-        <div style="margin-bottom: 10px; display: flex; gap: 8px;">
-          <input type="text" id="new-habit-input" placeholder="Trait (e.g. Wake Up Early)" style="flex:1;">
-          <button onclick="playSound('sound1'); addHabitCategory()">+ ADD TRAIT</button>
-        </div>
-        <div id="habit-list-container" style="max-height: 320px; overflow-y: auto; margin-bottom: 12px;"></div>
-
-        <h3>2. NUCLEOTIDE DNA STRAND</h3>
-        <p style="font-size:11px; color:#aaa;">Click blocks to configure intensity / toggle Yes/No state.</p>
-        <div id="dna-strand-builder" class="nucleotide-grid"></div>
-
-        <h3>3. 3D ORTHOGRAPHIC PREVIEW</h3>
-        <canvas id="preview-canvas" width="380" height="150"></canvas>
-        <button style="width:100%; margin-top:10px; background:#111; color:#a3e635; padding: 12px;" onclick="playSound('sound2'); spawnBacteria()">[ SPAWN ORGANISM INTO ACTIVE TANK ]</button>
-        <button onclick="playSound('sound3'); resetEntireTracker()" style="background:#400; color:#fff; width:100%; margin-top:8px; padding:6px;">[ RESET ALL DATA & START OVER ]</button>
-      </section>
-
-      <!-- RIGHT COLUMN -->
-      <section class="panel">
-        <h3>CHRONOLOGICAL TANK ARCHIVE (1-12 MONTHS)</h3>
-        <div id="folder-grid" class="folder-grid"></div>
-
-        <h3>ACTIVE ECOSYSTEM (MONTH <span id="active-month-label">1</span>)</h3>
-        <canvas id="simulation-canvas" width="660" height="260"></canvas>
-        
-        <div style="display: flex; gap: 8px; margin-top: 8px;">
-          <button id="sim-sound-toggle" onclick="toggleSimSound()" style="flex: 1; background: #111; color: #f87171; border: 1px solid #555; font-size: 11px; padding: 6px;">
-            SOUNDS: OFF [CLICK TO ENABLE]
-          </button>
-        </div>
-
-        <div style="background:#111; border:1px solid #444; padding:8px 12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering:crispEdges;">
-              <path d="M2,1 h2 v1 h2 v-1 h2 v2 h-1 v1 h-1 v1 h-1 v1 h-1 v-1 h-1 v-1 h-1 v-1 h-1 v-2 z" fill="#f87171"/>
-            </svg>
-            <span style="font-size:12px;">Bacteria Well-Being: <b id="stat-wellbeing" style="color:#f87171;">100%</b></span>
-          </div>
-          <div style="font-size:12px;">
-            Population: <b id="stat-pop">0</b> | Dominant Morph: <b id="stat-gene">Balanced</b>
-          </div>
-        </div>
-
-        <div style="background:#0d0d0d; border:1px solid #444; padding:8px 12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
-          <div style="font-size:11px; display:flex; flex-direction:column; gap:2px; min-width: 140px;">
-            <span>Islands Eaten: <b id="stat-islands-eaten" style="color:#34d399;">0</b></span>
-            <span style="font-size:10px; color:#aaa;">Gene Pool Diversity</span>
-          </div>
-          <div style="flex: 1; display: flex; justify-content: flex-end;">
-            <canvas id="gene-pool-graph" width="220" height="35" style="border: 1px solid #333; background: #000; width: 100%; max-width: 220px; height: 35px;"></canvas>
-          </div>
-        </div>
-
-        <button id="open-analytics-btn" style="width:100%; margin-top:12px; padding: 10px;" onclick="playSound('sound1'); toggleAnalytics(true)">OPEN PHYLOGENY & HEATMAP MATRIX</button>
-      </section>
-    </div>
+  <div id="statsHoverCard">
+    <div class="pop-date" id="popDate">2026-08-26</div>
+    <div class="pop-total" id="popTotal">Total Clicks: 0</div>
+    <div class="pop-list" id="popList"></div>
+    <div class="pop-note" id="popNote" style="display:none;"></div>
   </div>
 
-  <!-- ANALYTICS MODAL -->
-  <div id="analytics-modal" class="retro-modal">
-    <h3>EVOLUTIONARY PHYLOGENY & HABIT ANALYTICS MATRIX</h3>
-    <div class="matrix-split">
-      <div class="matrix-pane" style="flex: 0.6; min-width: 280px;">
-        <span style="font-size:13px; margin-bottom:8px;"><b>Phylogenetic Lineage Tree</b></span>
-        <canvas id="phylogeny-canvas" width="300" height="520"></canvas>
+  <div class="modal-overlay" id="noteModal">
+    <div class="modal">
+      <div class="modal-header" id="modalDate">Day Notes</div>
+      <textarea id="noteInput" placeholder="Write your daily thoughts or milestones..."></textarea>
+      <div class="modal-actions">
+        <button id="closeModal">Cancel</button>
+        <button id="saveNote">Save Note</button>
       </div>
-      <div class="matrix-pane" style="flex: 1.4; display: flex; flex-direction: column; overflow: hidden; width: 100%;">
-        <span style="font-size:13px; margin-bottom:8px; flex-shrink: 0;"><b>Habit Intensity Heatmaps Matrix</b></span>
-        
-        <div style="flex: 1; overflow-y: auto; width: 100%; min-height: 0; padding-right: 4px;">
-          <div id="heatmap-container" style="width: 100%;"></div>
-
-          <div style="margin-top: 15px; margin-bottom: 15px; border-top: 1px dashed #555; border-bottom: 1px dashed #555; padding-top: 10px; padding-bottom: 10px; width: 100%;">
-            <span style="font-size:13px; margin-bottom:6px; display:block;"><b>Multi-Trait Performance Trend Graph (Hover spots to inspect)</b></span>
-            <div style="width: 100%; display: flex; justify-content: center; position: relative;">
-              <canvas id="trend-canvas" width="800" height="220" style="cursor: crosshair; width: 100%; max-width: 100%;"></canvas>
-            </div>
-          </div>
-
-          <div id="progression-report-box" class="compact-stats-row"></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="matrix-tooltip" style="display:none; position:fixed; width: 240px; background:#111; border:2px solid #fff; padding:10px; font-size:11px; z-index:999; pointer-events:none; color:#fff; box-shadow: 4px 4px 0px #333; line-height: 1.4;"></div>
-
-    <div style="margin-top: 10px; border-top: 1px dashed #555; padding-top: 8px; display: flex; justify-content: flex-end;">
-      <button onclick="playSound('sound3'); toggleAnalytics(false)" style="padding:6px 14px;">CLOSE MATRIX</button>
     </div>
   </div>
 
   <script>
-    window.currentFirebaseUser = null;
+    const TOTAL_DAYS = 365;
+    const MAX_BEADS = 120; // Prevents performance lag
+    const PALETTE = ['#e63946', '#3a86ff', '#2ec4b6', '#ff006e', '#ffb703', '#8338ec', '#06d6a0'];
 
-    const EMOJI_CATEGORIES = {
-      "🧬 Science & Lab": ["🧬", "🧫", "🔬", "🧪", "🦠", "⚡", "🩻", "💡", "🔮", "🧠", "🔭", "📡", "⚙️", "🔧", "🧲", "💻", "🖥️", "💾", "💿", "🪙"],
-      "😀 Faces & Emotion": ["😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "😌", "😔", "😷", "🤒", "🤕", "🤢", "🤮", "🤧", "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "😎", "🤓", "🧐", "😕", "😟", "🙁", "😮", "😯", "😲", "😳", "🥺", "😡", "🤬", "😈", "👿", "💀", "☠️", "💩", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖"],
-      "❤️ Symbols & Hearts": ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❤️‍🔥", "❤️‍🩹", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "🔥", "⭐", "🌟", "💫", "✨", "☄️", "💥", "💯", "💢", "💬", "👁️‍🗨️", "🗨️", "💭", "💤", "🏁", "🚩", "🎌", "🏴", "🏳️", "🏳️‍🌈", "🏳️‍⚧️", "🏴‍☠️"],
-      "🐱 Animals & Nature": ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤", "🐣", "🐥", "🦆", "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🪱", "🐛", "🦋", "🐌", "🐞", "🐜", "🪰", "🪲", "🦟", "🦗", "🕷️", "🕸️", "🦂", "🐢", "🐍", "🦎", "🦖", "🦕", "🐙", "🦑", "🦐", "🦞", "🦀", "🐡", "🐠", "🐟", "🐬", "🐳", "🐋", "🦈", "🐅", "🐆", "🦓", "🦍", "🦧", "🐘", "🦛", "🦏", "🐪", "🐫", "🦒", "🦘", "🐃", "🐂", "🐄", "🐎", "🐖", "🐑", "🦙", "🐐", "🦌", "🐕", "🐩", "🦮", "🐕‍🦺", "🐈", "🐈‍⬛", "🪶", "🐓", "🦃", "🦤", "🦚", "🦜", "🦢", "🦩", "🕊️", "🐇", "🦝", "🦡", "🦫", "🦦", "🦥", "🐁", "🐀", "🐿️", "🦔"],
-      "🍎 Food & Plants": ["🍎", "🍏", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🍈", "🍒", "🍑", "🍍", "🥥", "🥝", "🍅", "🍆", "🥑", "🥦", "🥬", "🥒", "🌶️", "🫑", "🌽", "🥕", "🫒", "🧄", "🧅", "🥔", "🍠", "🥐", "🥯", "🍞", "🥖", "🥨", "🧀", "🥚", "🍳", "🧈", "🥞", "🧇", "🥓", "🥩", "🍗", "🍖", "🦴", "🌭", "🍔", "🍟", "🍕", "🥪", "🥙", "🧆", "🌮", "🌯", "🥗", "🥘", "🥫", "🍝", "🍜", "🍲", "🍛", "🍱", "🍤", "🍙", "🍚", "🍘", "🍥", "🥠", "🥮", "🍢", "🍡", "🍧", "🍨", "🍦", "🥧", "🧁", "🍰", "🎂", "🍮", "🍭", "🍬", "🍫", "🍿", "🍩", "🍪", "🌰", "🥜", "🍯", "🥛", "🍼", "☕", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🍷", "🍸", "🍹", "🍾", "🥃", "🥄", "🍴", "🍽️", "🥣", "🥡", "🥢", "🧂"],
-      "🚀 Travel & Activity": ["🚀", "🛸", "🛰️", "⛵", "🚢", "🚗", "🚕", "🚙", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒", "🚐", "🛻", "🚚", "🚛", "🚜", "🛵", "🏍️", "🛺", "🚲", "🛴", "🛹", "🛼", "🚏", "🛤️", "⛽", "🚨", "🚥", "🚦", "🚧", "⚓", "🚤", "🛳️", "⛴️", "🛥️", "✈️", "🛩️", "🛫", "🛬", "🪂", "💺", "🚁", "🚟", "🚡", "🧳", "⌛", "⏳", "🗺️", "🧭", "🏔️", "🌋", "🏕️", "🏖️", "🏜️", "🏝️", "🏟️", "🏛️", "🏗️", "🧱", "🏠", "🏡", "🏢", "🏣", "🏥", "🏦", "🏨", "🏪", "🏫", "🏬", "🏭", "🏰", "🗼", "🗽"],
-      "💡 Objects & Symbols": ["💡", "🔦", "🕯️", "🪔", "📔", "📕", "📖", "📗", "📘", "📙", "📚", "📓", "📰", "🔖", "🏷️", "💰", "🪙", "💴", "💵", "💶", "💷", "💳", "🧾", "📊", "✉️", "📧", "📦", "📫", "📪", "✏️", "✒️", "🖊️", "🖌️", "🖍️", "📝", "💼", "📁", "📂", "📅", "📈", "📉", "📌", "📍", "📎", "📏", "📐", "✂️", "🔒", "🔓", "🔏", "🔐", "🔑", "🔨", "🪓", "⛏️", "⚒️", "🛠️", "⚔️", "🛡️", "🔧", "🔩", "⚙️", "🗜️", "⚖️", "🔗", "⛓️", "🧰", "🧲", "🪜"]
-    };
-
-    let currentEmojiCategory = Object.keys(EMOJI_CATEGORIES)[0];
-
-    function toggleEmojiPickerDropdown() {
-      let dropdown = document.getElementById('emoji-picker-dropdown');
-      if (!dropdown) return;
-      let isVisible = dropdown.style.display === 'flex';
-      dropdown.style.display = isVisible ? 'none' : 'flex';
-      if (!isVisible) {
-        buildEmojiPickerTabs();
-        buildEmojiPickerGrid(currentEmojiCategory);
-      }
+    function formatDateKey(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     }
 
-    function buildEmojiPickerTabs() {
-      let tabsContainer = document.getElementById('emoji-categories-tabs');
-      if (!tabsContainer) return;
-      tabsContainer.innerHTML = '';
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const todayKey = formatDateKey(todayDate);
 
-      Object.keys(EMOJI_CATEGORIES).forEach(categoryName => {
-        let tab = document.createElement('button');
-        tab.type = 'button';
-        tab.className = 'emoji-category-tab' + (categoryName === currentEmojiCategory ? ' active' : '');
-        tab.innerText = categoryName;
-        tab.onclick = () => {
-          playSound('sound1');
-          currentEmojiCategory = categoryName;
-          document.querySelectorAll('.emoji-category-tab').forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          buildEmojiPickerGrid(categoryName);
-        };
-        tabsContainer.appendChild(tab);
-      });
-    }
-
-    function buildEmojiPickerGrid(categoryName) {
-      let grid = document.getElementById('emoji-grid');
-      if (!grid) return;
-      grid.innerHTML = '';
-      
-      let currentSelected = document.getElementById('settings-avatar-input').value || '🧬';
-      let emojis = EMOJI_CATEGORIES[categoryName] || [];
-
-      emojis.forEach(emoji => {
-        let cell = document.createElement('div');
-        cell.className = 'emoji-cell' + (emoji === currentSelected ? ' selected' : '');
-        cell.innerText = emoji;
-        cell.title = emoji;
-        cell.onclick = () => {
-          playSound('sound1');
-          document.querySelectorAll('.emoji-cell').forEach(c => c.classList.remove('selected'));
-          cell.classList.add('selected');
-          
-          document.getElementById('settings-avatar-input').value = emoji;
-          let preview = document.getElementById('settings-avatar-preview');
-          if (preview) preview.innerText = emoji;
-
-          let dropdown = document.getElementById('emoji-picker-dropdown');
-          if (dropdown) dropdown.style.display = 'none';
-        };
-        grid.appendChild(cell);
-      });
-    }
-
-    async function loginWithGoogle() {
-      try {
-        await window.FB_signInWithPopup(window.FB_AUTH, window.FB_GoogleProvider);
-      } catch (error) {
-        console.error("Google Authentication failed:", error);
-        alert("Login failed: " + error.message);
-      }
-    }
-
-    async function logoutFirebase() {
-      try {
-        await window.FB_signOut(window.FB_AUTH);
-        alert("Successfully logged out.");
-      } catch (error) {
-        console.error("Logout failed:", error);
-      }
-    }
-
-    async function performAutomaticCloudSync() {
-      if (!window.currentFirebaseUser) return;
-      try {
-        saveState();
-        let userId = window.currentFirebaseUser.uid;
-        
-        let userDocRef = window.FB_doc(window.FB_DB, "labs", userId);
-        await window.FB_setDoc(userDocRef, {
-          email: window.currentFirebaseUser.email,
-          displayName: appState.settings.nickname || window.currentFirebaseUser.displayName || "Anonymous Researcher",
-          previousNames: appState.settings.previousNames || [],
-          avatar: appState.settings.avatar || "🧬",
-          shareHabits: appState.settings.shareHabits,
-          showBiome: appState.settings.showBiome,
-          appState: appState,
-          lastUpdated: window.FB_serverTimestamp()
-        }, { merge: true });
-
-        let totalPopAcrossAllMonths = 0;
-        let totalIslandsAcrossAllMonths = 0;
-        for (let i = 1; i <= 12; i++) {
-          if (appState.months[i]) {
-            if (appState.months[i].population) totalPopAcrossAllMonths += appState.months[i].population.length;
-            if (appState.months[i].islandsEatenCount) totalIslandsAcrossAllMonths += appState.months[i].islandsEatenCount;
-          }
-        }
-
-        let m1Snapshot = null;
-        let habitsSnapshot = null;
-
-        if (appState.settings.showBiome !== false && appState.months[1]) {
-          let m1 = appState.months[1];
-          m1Snapshot = {
-            stones: m1.stones || [],
-            plants: (m1.plants || []).map(pl => ({
-              x: pl.x,
-              y: pl.y,
-              pixels: pl.pixels.map(px => ({ offsetX: px.offsetX, offsetY: px.offsetY, alive: px.alive }))
-            })),
-            population: (m1.population || []).map(org => ({
-              x: org.x,
-              y: org.y,
-              habitsSnapshot: org.habitsSnapshot
-            }))
-          };
-        }
-
-        if (appState.settings.shareHabits && appState.months[1] && appState.months[1].habits) {
-          habitsSnapshot = appState.months[1].habits;
-        }
-
-        let leaderboardRef = window.FB_doc(window.FB_DB, "leaderboard", userId);
-        await window.FB_setDoc(leaderboardRef, {
-          userId: userId,
-          displayName: `${appState.settings.avatar || '🧬'} ${appState.settings.nickname || window.currentFirebaseUser.displayName || 'Researcher'}`,
-          previousNames: appState.settings.previousNames || [],
-          totalPopulation: totalPopAcrossAllMonths,
-          islandsEaten: totalIslandsAcrossAllMonths,
-          shareHabits: !!appState.settings.shareHabits,
-          showBiome: appState.settings.showBiome !== false,
-          habits: habitsSnapshot,
-          m1Snapshot: m1Snapshot,
-          updatedAt: window.FB_serverTimestamp()
-        }, { merge: true });
-      } catch (err) {
-        console.error("Auto-sync background error:", err);
-      }
-    }
-
-    setInterval(() => {
-      if (window.currentFirebaseUser) {
-        performAutomaticCloudSync();
-      }
-    }, 5000);
-
-    async function loadUserDataFromCloud() {
-      if (!window.currentFirebaseUser) return;
-      try {
-        let userId = window.currentFirebaseUser.uid;
-        let userDocRef = window.FB_doc(window.FB_DB, "labs", userId);
-        let docSnap = await window.FB_getDoc(userDocRef);
-
-        if (docSnap.exists()) {
-          let cloudData = docSnap.data();
-          if (cloudData && cloudData.appState) {
-            appState = cloudData.appState;
-            if (!appState.settings) {
-              appState.settings = { nickname: window.currentFirebaseUser.displayName || "Researcher", previousNames: [], lastNicknameChange: 0, avatar: "🧬", shareHabits: true, showBiome: true };
-            }
-            if (!appState.settings.previousNames) appState.settings.previousNames = [];
-            saveState();
-            initFolders();
-            renderHabitManager();
-            updateHeaderPlayerProfile();
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load user data from cloud:", err);
-      }
-    }
-
-    async function openLeaderboard() {
-      toggleLeaderboard(true);
-      let tbody = document.getElementById('leaderboard-tbody');
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#777;">Fetching global ranks sorted by islands eaten...</td></tr>`;
-
-      try {
-        let q = window.FB_query(window.FB_collection(window.FB_DB, "leaderboard"), window.FB_orderBy("islandsEaten", "desc"), window.FB_limit(15));
-        let querySnapshot = await window.FB_getDocs(q);
-
-        if (querySnapshot.empty) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#777;">No leaderboard records found yet. Be the first to sync!</td></tr>`;
-          return;
-        }
-
-        let html = '';
-        let rank = 1;
-        let renderQueue = [];
-
-        querySnapshot.forEach((docSnap) => {
-          let data = docSnap.data();
-          let dateStr = data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate().toLocaleDateString() : 'Recent';
-          let rowId = `lb-canvas-${rank}`;
-          
-          let biomeAndStatsHtml = `<span style="color:#777; font-size:11px;">Private / Opted Out</span>`;
-
-          let prevNamesList = (data.previousNames && data.previousNames.length > 0) ? data.previousNames.join(', ') : 'None';
-          let nameTooltipText = `Previous Names: ${prevNamesList}`;
-
-          if (data.showBiome || data.shareHabits) {
-            let habitsHtml = '';
-            if (data.shareHabits && data.habits && data.habits.length > 0) {
-              habitsHtml = `<div style="display:flex; flex-direction:column; gap:3px; margin-top:4px;">`;
-              data.habits.forEach(h => {
-                let isYN = h.type === 'yn';
-                let valDisplay = isYN ? (h.units > 0 ? 'YES' : 'NO') : `${Math.min(h.units, 8)}h`;
-                let pct = isYN ? (h.units > 0 ? 100 : 10) : Math.round((Math.min(h.units, 8) / 8) * 100);
-                habitsHtml += `
-                  <div style="font-size:10px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1px;">
-                      <span style="color:${h.color}; display:flex; align-items:center; gap:4px;"><span style="width:6px; height:6px; background:${h.color}; display:inline-block;"></span>${h.name}:</span>
-                      <b style="color:#fff;">${valDisplay}</b>
-                    </div>
-                    <div style="width:120px; background:#222; height:3px; border:1px solid #444;">
-                      <div style="width:${pct}%; background:${h.color}; height:100%;"></div>
-                    </div>
-                  </div>
-                `;
-              });
-              habitsHtml += `</div>`;
-            }
-
-            biomeAndStatsHtml = `
-              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                ${data.showBiome && data.m1Snapshot ? `<canvas id="${rowId}" width="70" height="30" style="border:1px solid #555; background:#000; vertical-align:middle;"></canvas>` : ''}
-                ${habitsHtml}
-              </div>
-            `;
-
-            if (data.showBiome && data.m1Snapshot) {
-              renderQueue.push({ canvasId: rowId, m1: data.m1Snapshot });
-            }
-          }
-
-          html += `
-            <tr>
-              <td><b>#${rank}</b></td>
-              <td><span title="${nameTooltipText}" style="cursor:help; border-bottom:1px dotted #888;">${data.displayName || 'Researcher'}</span></td>
-              <td><span style="color:#34d399; font-weight:bold;">${data.islandsEaten || 0}</span></td>
-              <td><span style="color:#a3e635;">${data.totalPopulation || 0}</span></td>
-              <td>${biomeAndStatsHtml}</td>
-              <td style="color:#aaa; font-size:10px;">${dateStr}</td>
-            </tr>
-          `;
-          rank++;
-        });
-
-        tbody.innerHTML = html;
-
-        setTimeout(() => {
-          renderQueue.forEach(item => {
-            let cvs = document.getElementById(item.canvasId);
-            if (!cvs) return;
-            let ctx = cvs.getContext('2d');
-            ctx.clearRect(0, 0, cvs.width, cvs.height);
-
-            let scaleX = cvs.width / 660;
-            let scaleY = cvs.height / 260;
-
-            if (item.m1.stones) {
-              item.m1.stones.forEach(st => {
-                ctx.fillStyle = '#525252';
-                ctx.beginPath();
-                ctx.arc(st.x * scaleX, st.y * scaleY, Math.max(1, st.baseRadius * scaleX), 0, Math.PI * 2);
-                ctx.fill();
-              });
-            }
-
-            if (item.m1.plants) {
-              item.m1.plants.forEach(pl => {
-                pl.pixels.forEach(px => {
-                  if (px.alive) {
-                    ctx.fillStyle = '#34d399';
-                    ctx.fillRect((pl.x + px.offsetX) * scaleX, (pl.y + px.offsetY) * scaleY, 1.2, 1.2);
-                  }
-                });
-              });
-            }
-
-            if (item.m1.population) {
-              item.m1.population.forEach(org => {
-                ctx.fillStyle = (org.habitsSnapshot && org.habitsSnapshot[0]) ? org.habitsSnapshot[0].color : '#f87171';
-                ctx.fillRect(org.x * scaleX - 1, org.y * scaleY - 1, 2, 2);
-              });
-            }
-          });
-        }, 50);
-
-      } catch (err) {
-        console.error("Error loading leaderboard:", err);
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#f87171;">Failed to load global leaderboard ranks.</td></tr>`;
-      }
-    }
-
-    window.toggleLeaderboard = function(show) {
-      let modal = document.getElementById('leaderboard-modal');
-      if (modal) modal.style.display = show ? 'flex' : 'none';
-    }
-
-    window.toggleSettingsModal = function(show) {
-      let modal = document.getElementById('settings-modal');
-      if (modal) {
-        if (show) {
-          let currentNick = appState.settings.nickname || 'Researcher';
-          document.getElementById('settings-nickname-input').value = currentNick;
-          
-          let cooldownNotice = document.getElementById('settings-cooldown-notice');
-          let now = Date.now();
-          let lastChange = appState.settings.lastNicknameChange || 0;
-          let fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
-          let timeRemaining = fourteenDaysMs - (now - lastChange);
-
-          if (timeRemaining > 0) {
-            let daysLeft = Math.ceil(timeRemaining / (24 * 60 * 60 * 1000));
-            cooldownNotice.innerText = `(Locked: can change in ${daysLeft} days)`;
-            document.getElementById('settings-nickname-input').disabled = true;
-          } else {
-            cooldownNotice.innerText = `(Available)`;
-            document.getElementById('settings-nickname-input').disabled = false;
-          }
-
-          let currentAvatar = appState.settings.avatar || '🧬';
-          document.getElementById('settings-avatar-input').value = currentAvatar;
-          let preview = document.getElementById('settings-avatar-preview');
-          if (preview) preview.innerText = currentAvatar;
-
-          document.getElementById('settings-share-habits').checked = !!appState.settings.shareHabits;
-          document.getElementById('settings-show-biome').checked = appState.settings.showBiome !== false;
-          
-          let dropdown = document.getElementById('emoji-picker-dropdown');
-          if (dropdown) dropdown.style.display = 'none';
-        }
-        modal.style.display = show ? 'flex' : 'none';
-      }
-    }
-
-    window.openSettingsModal = function() {
-      playSound('sound1');
-      toggleSettingsModal(true);
-    }
-
-    window.savePersonalSettings = function() {
-      playSound('sound2');
-      let nickInput = document.getElementById('settings-nickname-input').value.trim();
-      let avatarInput = document.getElementById('settings-avatar-input').value || '🧬';
-      let shareCheck = document.getElementById('settings-share-habits').checked;
-      let biomeCheck = document.getElementById('settings-show-biome').checked;
-
-      let now = Date.now();
-      let lastChange = appState.settings.lastNicknameChange || 0;
-      let fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
-
-      if (!document.getElementById('settings-nickname-input').disabled && nickInput && nickInput !== appState.settings.nickname) {
-        if (now - lastChange < fourteenDaysMs) {
-          alert("You can only change your username once every 14 days!");
-          return;
-        }
-        if (!appState.settings.previousNames) appState.settings.previousNames = [];
-        if (appState.settings.nickname && appState.settings.nickname !== 'Researcher') {
-          appState.settings.previousNames.push(appState.settings.nickname);
-        }
-        appState.settings.nickname = nickInput;
-        appState.settings.lastNicknameChange = now;
-      }
-
-      appState.settings.avatar = avatarInput;
-      appState.settings.shareHabits = shareCheck;
-      appState.settings.showBiome = biomeCheck;
-
-      saveState();
-      updateHeaderPlayerProfile();
-      toggleSettingsModal(false);
-    }
-
-    function updateHeaderPlayerProfile() {
-      let nicknameElem = document.getElementById('header-nickname');
-      let avatarElem = document.getElementById('header-avatar');
-      let miniCvs = document.getElementById('header-biome-mini');
-      let userDisplayBox = document.getElementById('header-user-display');
-
-      let currentNick = appState.settings.nickname || 'Researcher';
-      if (nicknameElem) nicknameElem.innerText = currentNick;
-      if (avatarElem) avatarElem.innerText = appState.settings.avatar || '🧬';
-
-      if (userDisplayBox) {
-        let prevList = (appState.settings.previousNames && appState.settings.previousNames.length > 0) ? appState.settings.previousNames.join(', ') : 'None';
-        userDisplayBox.title = `Current: ${currentNick}\nPrevious Names: ${prevList}\nClick to open Cabinet Settings`;
-      }
-
-      if (miniCvs) {
-        if (appState.settings.showBiome !== false) {
-          miniCvs.style.display = 'inline-block';
-        } else {
-          miniCvs.style.display = 'none';
-        }
-      }
-    }
-
-    function playSound(soundId) {
-      let audioElem = document.getElementById(soundId);
-      if (audioElem) {
-        audioElem.currentTime = 0;
-        audioElem.play().catch(e => {
-          console.log("Audio play blocked or file missing:", e);
-        });
-      }
-    }
-
-    let simulationSoundEnabled = false;
-    let audioCtx = null;
-
-    function toggleSimSound() {
-      simulationSoundEnabled = !simulationSoundEnabled;
-      let btn = document.getElementById('sim-sound-toggle');
-      if (simulationSoundEnabled) {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        } else if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
-        btn.innerText = "SOUNDS: ON [CLICK TO DISABLE]";
-        btn.style.color = "#a3e635";
-      } else {
-        btn.innerText = "SOUNDS: OFF [CLICK TO ENABLE]";
-        btn.style.color = "#f87171";
-      }
-    }
-
-    function playChewClickSound() {
-      if (!simulationSoundEnabled) return;
-      try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let osc = audioCtx.createOscillator();
-        let gain = audioCtx.createGain();
-
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(800 + Math.random() * 300, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.04);
-
-        gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
-
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.04);
-      } catch (e) {
-        console.log("Web Audio API error:", e);
-      }
-    }
-
-    const STORAGE_KEY = 'CHRONO_DNA_PUBLIC_V23';
-
-    const AVAILABLE_MORPHS = [
-      { id: 'flagella', label: 'Flagella (Speed/Tail)' },
-      { id: 'shield', label: 'Shield (Defense Ring)' },
-      { id: 'bodysize', label: 'Body Size (Core Radius)' },
-      { id: 'antennas', label: 'Antennas (Sensors)' },
-      { id: 'spikes', label: 'Spikes (Surface Density)' },
-      { id: 'modules', label: 'Attached Modules (Worm Chain)' }
+    let clickers = JSON.parse(localStorage.getItem('vast_clickers_v4')) || [
+      { id: 'c1', name: 'Effort', color: PALETTE[0] },
+      { id: 'c2', name: 'Focus', color: PALETTE[1] }
     ];
+    let effortData = JSON.parse(localStorage.getItem('vast_effort_multi_v4')) || {};
+    let notesData = JSON.parse(localStorage.getItem('vast_notes_data')) || {};
+    let activeSpell = 'none';
 
-    function getDefaultState() {
-      let months = {};
-      for (let i = 1; i <= 12; i++) {
-        months[i] = {
-          monthId: i,
-          habits: [
-            { name: 'Spanish', type: 'hours', units: 4, color: '#f87171', morph: 'flagella' },
-            { name: 'Wake Early', type: 'yn', units: 1, color: '#60a5fa', morph: 'shield' },
-            { name: 'German', type: 'hours', units: 4, color: '#a3e635', morph: 'bodysize' }
-          ],
-          dnaStrand: [
-            { type: 'Spanish', habitType: 'hours', color: '#f87171', value: 4, morph: 'flagella' },
-            { type: 'Wake Early', habitType: 'yn', color: '#60a5fa', value: 1, morph: 'shield' },
-            { type: 'German', habitType: 'hours', color: '#a3e635', value: 4, morph: 'bodysize' }
-          ],
-          population: [],
-          deadSpots: [],
-          floatingFood: [],
-          hearts: [],
-          plants: [],
-          stones: [],
-          plantParticles: [],
-          phylogenyTree: [],
-          performanceHistory: [],
-          islandsEatenCount: 0,
-          genePoolHistory: [],
-          lastSavedTimestamp: Date.now()
-        };
-      }
-      return { 
-        activeMonth: 1, 
-        settings: { nickname: 'Researcher', previousNames: [], lastNicknameChange: 0, avatar: '🧬', shareHabits: true, showBiome: true },
-        months: months 
-      };
-    }
-
-    let appState = loadState();
-
-    function loadState() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try { 
-          let parsed = JSON.parse(saved);
-          let now = Date.now();
-          if (!parsed.settings) {
-            parsed.settings = { nickname: 'Researcher', previousNames: [], lastNicknameChange: 0, avatar: '🧬', shareHabits: true, showBiome: true };
-          }
-          if (!parsed.settings.previousNames) parsed.settings.previousNames = [];
-          if (parsed.settings.lastNicknameChange === undefined) parsed.settings.lastNicknameChange = 0;
-
-          for (let i = 1; i <= 12; i++) {
-            if (!parsed.months[i]) {
-              parsed.months[i] = getDefaultState().months[i];
-            } else {
-              if (!parsed.months[i].habits) parsed.months[i].habits = getDefaultState().months[i].habits;
-              if (!parsed.months[i].dnaStrand) parsed.months[i].dnaStrand = getDefaultState().months[i].dnaStrand;
-              if (!parsed.months[i].deadSpots) parsed.months[i].deadSpots = [];
-              if (!parsed.months[i].floatingFood) parsed.months[i].floatingFood = [];
-              if (!parsed.months[i].hearts) parsed.months[i].hearts = [];
-              if (!parsed.months[i].plants) parsed.months[i].plants = [];
-              if (!parsed.months[i].stones) parsed.months[i].stones = [];
-              if (!parsed.months[i].plantParticles) parsed.months[i].plantParticles = [];
-              if (parsed.months[i].islandsEatenCount === undefined) parsed.months[i].islandsEatenCount = 0;
-              if (!parsed.months[i].genePoolHistory) parsed.months[i].genePoolHistory = [];
-              
-              let lastTime = parsed.months[i].lastSavedTimestamp || now;
-              let elapsedHours = (now - lastTime) / (1000 * 60 * 60);
-              if (elapsedHours > 0 && parsed.months[i].population) {
-                let dropAmount = elapsedHours * 2.0; 
-                parsed.months[i].population.forEach(org => {
-                  org.wellbeing = Math.max(0, org.wellbeing - dropAmount);
-                });
-              }
-              parsed.months[i].lastSavedTimestamp = now;
-            }
-          }
-          return parsed; 
-        } catch (e) { console.error(e); }
-      }
-      return getDefaultState();
-    }
-
-    function saveState() {
-      let now = Date.now();
-      for (let i = 1; i <= 12; i++) {
-        if (appState.months[i]) {
-          appState.months[i].lastSavedTimestamp = now;
-          appState.months[i].deadSpots = [];
-          appState.months[i].floatingFood = [];
-          appState.months[i].hearts = [];
-          appState.months[i].plantParticles = [];
-        }
-      }
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-      } catch (e) {
-        console.error("LocalStorage save failed:", e);
-      }
-    }
-
-    // Reset Function Implementation
-    function resetEntireTracker() {
-      if (confirm("Are you sure you want to completely wipe all progression data and start over?")) {
-        localStorage.removeItem(STORAGE_KEY);
-        appState = getDefaultState();
-        saveState();
-        initFolders();
-        renderHabitManager();
-        updateHeaderPlayerProfile();
-        alert("System successfully reset to default state.");
-      }
-    }
-
-    function exportJSONBackup() {
-      saveState();
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `chrono_dna_backup_${new Date().toISOString().slice(0,10)}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-    }
-
-    function importJSONBackup(event) {
-      let file = event.target.files[0];
-      if (!file) return;
-      let reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          let importedData = JSON.parse(e.target.result);
-          if (importedData && importedData.months) {
-            appState = importedData;
-            if (!appState.settings) appState.settings = { nickname: 'Researcher', previousNames: [], lastNicknameChange: 0, avatar: '🧬', shareHabits: true, showBiome: true };
-            if (!appState.settings.previousNames) appState.settings.previousNames = [];
-            saveState();
-            initFolders();
-            renderHabitManager();
-            updateHeaderPlayerProfile();
-            alert("Backup successfully imported and loaded!");
-          } else {
-            alert("Invalid backup file format.");
-          }
-        } catch (err) {
-          alert("Failed to parse JSON backup file.");
-          console.error(err);
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = '';
-    }
-
-    setInterval(() => {
-      saveState();
-    }, 10000);
-
-    function renderHabitManager() {
-      let container = document.getElementById('habit-list-container');
-      if (!container) return;
-      let monthData = appState.months[appState.activeMonth];
-
-      container.innerHTML = '';
-      monthData.habits.forEach((h, idx) => {
-        let row = document.createElement('div');
-        row.className = 'habit-row';
-
-        let usedMorphs = monthData.habits.map((item, i) => (i !== idx && item.morph !== 'modules') ? item.morph : null);
-
-        let optionsHtml = AVAILABLE_MORPHS.map(m => {
-          let isTaken = m.id !== 'modules' && usedMorphs.includes(m.id);
-          let labelText = m.label + (isTaken ? ' [Taken]' : '');
-          let styleAttr = isTaken ? 'style="background:#222; color:#777;"' : '';
-          let selectedAttr = h.morph === m.id ? 'selected' : '';
-          return `<option value="${m.id}" ${selectedAttr} ${styleAttr}>${labelText}</option>`;
-        }).join('');
-
-        let isYN = h.type === 'yn';
-
-        row.innerHTML = `
-          <div class="habit-row-top">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <input type="color" value="${h.color}" onchange="playSound('sound1'); updateHabitColor(${idx}, this.value)" title="Choose Trait Color">
-              <input type="text" value="${h.name}" onchange="updateHabitNameInline(${idx}, this.value)" style="width: 110px; font-weight: bold; background: #000; color: #fff; border: 1px solid #444; padding: 2px 4px;" title="Edit trait name directly">
-            </div>
-            <div style="display:flex; align-items:center; gap:4px;">
-              <select style="font-size:10px; padding:1px;" onchange="playSound('sound1'); updateHabitMode(${idx}, this.value)">
-                <option value="hours" ${!isYN ? 'selected' : ''}>Hours (1-8h)</option>
-                <option value="yn" ${isYN ? 'selected' : ''}>Yes / No</option>
-              </select>
-              ${isYN ? `
-                <select style="font-size:10px; padding:1px; width:50px;" onchange="playSound('sound1'); updateHabitUnits(${idx}, this.value)">
-                  <option value="1" ${h.units === 1 ? 'selected' : ''}>YES</option>
-                  <option value="0" ${h.units === 0 ? 'selected' : ''}>NO</option>
-                </select>
-              ` : `
-                <input type="number" min="0" max="8" value="${h.units}" style="width:38px;" onchange="playSound('sound1'); updateHabitUnits(${idx}, this.value)"> hrs
-              `}
-              <button onclick="playSound('sound3'); removeHabitCategory(${idx})" style="padding:2px 5px;">X</button>
-            </div>
-          </div>
-          <div class="habit-row-bottom">
-            <span style="font-size:10px; color:#aaa;">Morph:</span>
-            <select style="flex:1; font-size:11px;" onchange="playSound('sound1'); updateHabitMorph(${idx}, this.value)">
-              ${optionsHtml}
-            </select>
-          </div>
-        `;
-        container.appendChild(row);
-      });
-      renderDNAConstructor();
-    }
-
-    window.updateHabitNameInline = function(idx, newName) {
-      newName = newName.trim();
-      if (!newName) return;
-      let monthData = appState.months[appState.activeMonth];
-      let oldName = monthData.habits[idx].name;
-      monthData.habits[idx].name = newName;
-      if (monthData.dnaStrand[idx]) {
-        monthData.dnaStrand[idx].type = newName;
-      }
-      if (monthData.performanceHistory) {
-        monthData.performanceHistory.forEach(entry => {
-          entry.habits.forEach(h => {
-            if (h.name === oldName) {
-              h.name = newName;
-            }
-          });
-        });
-      }
-      saveState();
-      renderHabitManager();
-    }
-
-    window.updateHabitMode = function(idx, mode) {
-      let monthData = appState.months[appState.activeMonth];
-      monthData.habits[idx].type = mode;
-      if (mode === 'yn') {
-        monthData.habits[idx].units = monthData.habits[idx].units > 0 ? 1 : 0;
-      } else {
-        if (monthData.habits[idx].units === 0) monthData.habits[idx].units = 4;
-      }
-      if (monthData.dnaStrand[idx]) {
-        monthData.dnaStrand[idx].habitType = mode;
-        monthData.dnaStrand[idx].value = monthData.habits[idx].units;
-      }
-      saveState();
-      renderHabitManager();
-    }
-
-    window.addHabitCategory = function() {
-      let input = document.getElementById('new-habit-input');
-      let name = input.value.trim();
-      if (!name) return;
-
-      let monthData = appState.months[appState.activeMonth];
-      let pastelColors = ['#f87171', '#60a5fa', '#a3e635', '#f472b6', '#34d399', '#fbbf24', '#818cf8'];
-      let color = pastelColors[monthData.habits.length % pastelColors.length];
-
-      let usedMorphs = monthData.habits.map(h => h.morph);
-      let availableUnused = AVAILABLE_MORPHS.find(m => m.id === 'modules' || !usedMorphs.includes(m.id));
-      let chosenMorph = availableUnused ? availableUnused.id : 'modules';
-
-      monthData.habits.push({ name: name, type: 'hours', units: 4, color: color, morph: chosenMorph });
-      monthData.dnaStrand.push({ type: name, habitType: 'hours', color: color, value: 4, morph: chosenMorph });
-
-      input.value = '';
-      saveState();
-      renderHabitManager();
-    }
-
-    window.removeHabitCategory = function(idx) {
-      let monthData = appState.months[appState.activeMonth];
-      if (!monthData.habits || monthData.habits.length === 0) return; 
-      monthData.habits.splice(idx, 1);
-      if (monthData.dnaStrand && monthData.dnaStrand[idx]) {
-        monthData.dnaStrand.splice(idx, 1);
-      }
-      saveState();
-      renderHabitManager();
-    };
-
-    window.updateHabitUnits = function(idx, val) {
-      let monthData = appState.months[appState.activeMonth];
-      let habit = monthData.habits[idx];
-      let parsed = parseFloat(val) || 0;
-      if (habit.type === 'yn') {
-        parsed = parsed > 0 ? 1 : 0;
-      } else {
-        if (parsed > 8) parsed = 8;
-      }
-      habit.units = parsed;
-      if (monthData.dnaStrand[idx]) {
-        monthData.dnaStrand[idx].value = parsed;
-      }
-      saveState();
-      renderHabitManager();
-    }
-
-    window.updateHabitColor = function(idx, newColor) {
-      let monthData = appState.months[appState.activeMonth];
-      monthData.habits[idx].color = newColor;
-      if (monthData.dnaStrand[idx]) {
-        monthData.dnaStrand[idx].color = newColor;
-      }
-      saveState();
-      renderHabitManager();
-    }
-
-    window.updateHabitMorph = function(idx, newMorph) {
-      let monthData = appState.months[appState.activeMonth];
-      if (newMorph !== 'modules') {
-        let conflict = monthData.habits.some((h, i) => i !== idx && h.morph === newMorph);
-        if (conflict) {
-          alert("This morphological trait is already assigned to another habit!");
-          return;
-        }
-      }
-      monthData.habits[idx].morph = newMorph;
-      if (monthData.dnaStrand[idx]) {
-        monthData.dnaStrand[idx].morph = newMorph;
-      }
-      saveState();
-      renderHabitManager();
-    }
-
-    function renderDNAConstructor() {
-      let container = document.getElementById('dna-strand-builder');
-      if (!container) return;
-      let monthData = appState.months[appState.activeMonth];
-      
-      container.innerHTML = '';
-      monthData.dnaStrand.forEach((gene, idx) => {
-        let block = document.createElement('div');
-        block.className = 'nucleotide-block';
-        block.style.backgroundColor = gene.color;
-        block.style.color = '#000';
-        
-        let isYN = gene.habitType === 'yn';
-        if (isYN) {
-          block.innerText = (gene.value > 0 ? 'Y' : 'N');
-          block.title = `${gene.type} [${gene.morph}] (Status: ${gene.value > 0 ? 'YES' : 'NO'})`;
-        } else {
-          block.innerText = gene.type[0].toUpperCase();
-          block.title = `${gene.type} [${gene.morph}] (${gene.value}h / 8h max)`;
-        }
-        
-        block.onclick = () => {
-          playSound('sound1');
-          if (isYN) {
-            gene.value = gene.value > 0 ? 0 : 1;
-          } else {
-            gene.value = (gene.value % 8) + 1;
-          }
-          monthData.habits[idx].units = gene.value;
-          saveState();
-          renderHabitManager();
-        };
-        container.appendChild(block);
-      });
-    }
-
-    let previewAngle = 0;
-
-    function renderOrganism(ctx, x, y, angle, habits, isMoving) {
-      ctx.save();
-      ctx.translate(x, y);
-      if (angle !== undefined) ctx.rotate(angle);
-
-      let baseRadius = 6;
-      let flagellaList = [];
-      let shieldRadiusVal = 0;
-      let shieldColor = '#60a5fa';
-      let antennaCount = 0;
-      let antennaColor = '#fff';
-      let spikeDensity = 0;
-      let spikeColor = '#fff';
-      let wormModules = [];
-
-      habits.forEach(h => {
-        let effectiveUnits = h.type === 'yn' ? (h.units > 0 ? 6 : 1) : Math.min(h.units, 8);
-        if (effectiveUnits <= 0 && h.type !== 'yn') return;
-
-        if (h.morph === 'bodysize') {
-          baseRadius = 4 + (effectiveUnits * 0.9);
-        } else if (h.morph === 'flagella') {
-          flagellaList.push({ units: effectiveUnits, color: h.color });
-        } else if (h.morph === 'shield') {
-          shieldRadiusVal = baseRadius + 3 + (effectiveUnits * 1.2);
-          shieldColor = h.color;
-        } else if (h.morph === 'antennas') {
-          antennaCount = Math.floor(effectiveUnits * 0.7) + 2;
-          antennaColor = h.color;
-        } else if (h.morph === 'spikes') {
-          spikeDensity = effectiveUnits;
-          spikeColor = h.color;
-        } else if (h.morph === 'modules') {
-          for (let u = 0; u < effectiveUnits; u++) {
-            wormModules.push({ color: h.color, name: h.name });
-          }
-        }
-      });
-
-      if (shieldRadiusVal > 0) {
-        ctx.strokeStyle = shieldColor;
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.arc(0, 0, shieldRadiusVal, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
-      if (spikeDensity > 0) {
-        let numSpikes = 6 + Math.floor(spikeDensity * 1.5);
-        ctx.strokeStyle = spikeColor;
-        ctx.lineWidth = 1.5;
-        for (let s = 0; s < numSpikes; s++) {
-          let sAngle = (s / numSpikes) * Math.PI * 2;
-          let innerR = baseRadius;
-          let outerR = baseRadius + 3 + (spikeDensity * 0.6);
-          ctx.beginPath();
-          ctx.moveTo(Math.cos(sAngle) * innerR, Math.sin(sAngle) * innerR);
-          ctx.lineTo(Math.cos(sAngle) * outerR, Math.sin(sAngle) * outerR);
-          ctx.stroke();
-        }
-      }
-
-      if (antennaCount > 0) {
-        ctx.strokeStyle = antennaColor;
-        ctx.lineWidth = 1;
-        for (let a = 0; a < antennaCount; a++) {
-          let aAngle = -Math.PI / 4 + (a / (antennaCount - 1 || 1)) * (Math.PI / 2);
-          let antLen = 8 + (antennaCount * 1.2);
-          ctx.beginPath();
-          ctx.moveTo(Math.cos(aAngle) * baseRadius, Math.sin(aAngle) * baseRadius);
-          ctx.lineTo(Math.cos(aAngle) * (baseRadius + antLen), Math.sin(aAngle) * (baseRadius + antLen));
-          ctx.stroke();
-          
-          ctx.fillStyle = antennaColor;
-          ctx.beginPath();
-          ctx.arc(Math.cos(aAngle) * (baseRadius + antLen), Math.sin(aAngle) * (baseRadius + antLen), 2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-
-      let prevX = 0;
-      let prevY = 0;
-      let segRadius = baseRadius * 0.85;
-
-      if (wormModules.length > 0) {
-        wormModules.forEach((mod, mIdx) => {
-          let dist = segRadius * 1.6;
-          let angleOffset = (isMoving ? previewAngle : Date.now() * 0.005) - (mIdx * 0.4);
-          let segX = prevX - Math.cos(angleOffset) * dist;
-          let segY = prevY - Math.sin(angleOffset) * (dist * 0.4);
-
-          ctx.strokeStyle = mod.color;
-          ctx.lineWidth = segRadius * 1.8;
-          ctx.beginPath();
-          ctx.moveTo(prevX, prevY);
-          ctx.lineTo(segX, segY);
-          ctx.stroke();
-
-          ctx.fillStyle = mod.color;
-          ctx.beginPath();
-          ctx.arc(segX, segY, segRadius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = '#fff';
-          ctx.lineWidth = 1;
-          ctx.stroke();
-
-          prevX = segX;
-          prevY = segY;
-        });
-      }
-
-      ctx.fillStyle = '#111';
-      ctx.beginPath();
-      ctx.arc(0, 0, baseRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      flagellaList.forEach((f, fIdx) => {
-        let tailLen = 8 + (f.units * 2.0);
-        ctx.strokeStyle = f.color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        let tailBaseX = -baseRadius;
-        let tailBaseY = (fIdx * 4) - 2;
-        ctx.moveTo(tailBaseX, tailBaseY);
-        let animFactor = isMoving ? previewAngle : Date.now() * 0.01;
-        ctx.quadraticCurveTo(
-          tailBaseX - tailLen * 0.6, 
-          Math.sin(animFactor * 3 + fIdx) * (4 + f.units * 0.8), 
-          tailBaseX - tailLen, 
-          Math.cos(animFactor * 2 + fIdx) * 6
-        );
-        ctx.stroke();
-      });
-
-      ctx.restore();
-    }
-
-    function drawPreview3D() {
-      let cvs = document.getElementById('preview-canvas');
-      if (!cvs) return;
-      let ctx = cvs.getContext('2d');
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
-
-      let monthData = appState.months[appState.activeMonth];
-      previewAngle += 0.03;
-      
-      ctx.save();
-      ctx.translate(cvs.width / 2, cvs.height / 2);
-      renderOrganism(ctx, 0, 0, 0, monthData.habits, true);
-      ctx.restore();
-    }
-
-    function initFolders() {
-      let grid = document.getElementById('folder-grid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      for (let i = 1; i <= 12; i++) {
-        let card = document.createElement('div');
-        card.className = 'folder-card';
-        card.innerHTML = `<b>0${i}_MTH</b><br><span style="font-size:10px; color:#aaa;">Pop: ${appState.months[i].population.length}</span>`;
-        card.onclick = () => {
-          playSound('sound1');
-          appState.activeMonth = i;
-          document.getElementById('active-month-label').innerText = i;
-          saveState();
-          renderHabitManager();
-        };
-        grid.appendChild(card);
-      }
-    }
-
-    function checkNonOverlapping(monthData, cx, cy, radius) {
-      let overlapPlant = monthData.plants.some(p => Math.hypot(p.x - cx, p.y - cy) < p.baseRadius + radius + 15);
-      let overlapStone = monthData.stones.some(s => Math.hypot(s.x - cx, s.y - cy) < s.baseRadius + radius + 15);
-      return !overlapPlant && !overlapStone;
-    }
-
-    function spawnNonOverlappingEntity(monthData, maxW, maxH, type, maxAttempts = 150) {
-      let attempts = 0;
-      while (attempts < maxAttempts) {
-        if (type === 'plant') {
-          let baseRadius = 35 + Math.random() * 20;
-          let cx = Math.random() * (maxW - 120) + 60;
-          let cy = Math.random() * (maxH - 120) + 60;
-          
-          if (checkNonOverlapping(monthData, cx, cy, baseRadius)) {
-            let targetPixels = [];
-            let seedOffset1 = Math.random() * 10;
-            let seedOffset2 = Math.random() * 10;
-            for (let dx = -baseRadius - 15; dx <= baseRadius + 15; dx += 3) {
-              for (let dy = -baseRadius - 15; dy <= baseRadius + 15; dy += 3) {
-                let dist = Math.hypot(dx, dy);
-                let angle = Math.atan2(dy, dx);
-                let jaggedRadius = baseRadius + Math.sin(angle * 5 + seedOffset1) * 8 + Math.cos(angle * 3 - seedOffset2) * 7;
-                if (dist <= jaggedRadius) {
-                  targetPixels.push({ offsetX: dx, offsetY: dy });
-                }
-              }
-            }
-            
-            targetPixels.sort(() => Math.random() - 0.5);
-            let activePixels = targetPixels.map(tp => ({ offsetX: tp.offsetX, offsetY: tp.offsetY, alive: false }));
-
-            monthData.plants.push({ 
-              x: cx, 
-              y: cy, 
-              pixels: activePixels, 
-              baseRadius: baseRadius, 
-              isRegenerating: true, 
-              regenerationTimer: 0 
-            });
-            return true;
-          }
-        } else if (type === 'stone') {
-          let baseRadius = 22 + Math.random() * 12;
-          let cx = Math.random() * (maxW - 100) + 50;
-          let cy = Math.random() * (maxH - 100) + 50;
-
-          if (checkNonOverlapping(monthData, cx, cy, baseRadius)) {
-            let pixels = [];
-            let seedOffset1 = Math.random() * 10;
-            let seedOffset2 = Math.random() * 10;
-            for (let dx = -baseRadius - 10; dx <= baseRadius + 10; dx += 3) {
-              for (let dy = -baseRadius - 10; dy <= baseRadius + 10; dy += 3) {
-                let dist = Math.hypot(dx, dy);
-                let angle = Math.atan2(dy, dx);
-                let jaggedRadius = baseRadius + Math.sin(angle * 4 + seedOffset1) * 6 + Math.cos(angle * 6 - seedOffset2) * 5;
-                if (dist <= jaggedRadius) {
-                  pixels.push({ offsetX: dx, offsetY: dy });
-                }
-              }
-            }
-            monthData.stones.push({ x: cx, y: cy, baseRadius: baseRadius, pixels: pixels });
-            return true;
-          }
-        }
-        attempts++;
-      }
-      return false;
-    }
-
-    window.spawnBacteria = function() {
-      let monthData = appState.months[appState.activeMonth];
-      if (!monthData.population) monthData.population = [];
-      if (!monthData.phylogenyTree) monthData.phylogenyTree = [];
-      if (!monthData.performanceHistory) monthData.performanceHistory = [];
-
-      let snapshotHabits = JSON.parse(JSON.stringify(monthData.habits));
-      let dominantHabit = snapshotHabits.reduce((max, h) => {
-        let valMax = max.type === 'yn' ? (max.units > 0 ? 8 : 0) : max.units;
-        let valH = h.type === 'yn' ? (h.units > 0 ? 8 : 0) : h.units;
-        return valH > valMax ? h : max;
-      }, snapshotHabits[0]);
-
-      if (!monthData.plants || monthData.plants.length === 0) {
-        monthData.plants = [];
-        for(let p = 0; p < 8; p++) {
-          spawnNonOverlappingEntity(monthData, 660, 260, 'plant');
-        }
-      }
-      if (!monthData.stones || monthData.stones.length === 0) {
-        monthData.stones = [];
-        for(let s = 0; s < 3; s++) {
-          spawnNonOverlappingEntity(monthData, 660, 260, 'stone');
-        }
-      }
-
-      let spawnX = Math.random() * 600 + 30;
-      let spawnY = Math.random() * 200 + 20;
-      let attempts = 0;
-      while (attempts < 20) {
-        let collides = monthData.stones.some(st => Math.hypot(st.x - spawnX, st.y - spawnY) < st.baseRadius + 15) ||
-                       monthData.plants.some(pl => Math.hypot(pl.x - spawnX, pl.y - spawnY) < pl.baseRadius + 15);
-        if (!collides) break;
-        spawnX = Math.random() * 600 + 30;
-        spawnY = Math.random() * 200 + 20;
-        attempts++;
-      }
-
-      let newOrg = {
-        id: Math.random().toString(36).substring(2, 7),
-        x: spawnX,
-        y: spawnY,
-        vx: (Math.random() - 0.5) * 0.8,
-        vy: (Math.random() - 0.5) * 0.8,
-        angle: Math.random() * Math.PI * 2,
-        wellbeing: 100,
-        habitsSnapshot: snapshotHabits,
-        dna: JSON.parse(JSON.stringify(monthData.dnaStrand)),
-        generation: monthData.population.length + 1,
-        speciesName: `${dominantHabit ? dominantHabit.name : 'Custom'} Morph (Gen ${monthData.population.length + 1})`
-      };
-
-      monthData.population.push(newOrg);
-      monthData.phylogenyTree.push({ 
-        gen: newOrg.generation, 
-        name: newOrg.speciesName,
-        color: newOrg.dna[0]?.color || '#fff'
-      });
-
-      monthData.performanceHistory.push({
-        timestamp: 'Day ' + (monthData.performanceHistory.length + 1),
-        habits: snapshotHabits
-      });
-
-      if (!monthData.genePoolHistory) monthData.genePoolHistory = [];
-      let diversityScore = monthData.habits.reduce((acc, h) => acc + (h.type === 'yn' ? (h.units > 0 ? 1 : 0) : h.units), 0);
-      monthData.genePoolHistory.push(diversityScore);
-
-      saveState();
-      initFolders();
-    }
-
-    let isMouseDown = false;
-    let mousePos = { x: 0, y: 0 };
-
-    window.addEventListener('DOMContentLoaded', () => {
-      let cvs = document.getElementById('simulation-canvas');
-      if (cvs) {
-        cvs.addEventListener('mousedown', (e) => {
-          isMouseDown = true;
-          updateMousePos(e, cvs);
-        });
-        window.addEventListener('mouseup', () => { isMouseDown = false; });
-        cvs.addEventListener('mousemove', (e) => {
-          if (isMouseDown) updateMousePos(e, cvs);
-        });
-      }
-      updateHeaderPlayerProfile();
+    // Mouse Tracking for gravity
+    const mouse = { x: -1000, y: -1000 };
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
     });
 
-    function updateMousePos(e, cvs) {
-      let rect = cvs.getBoundingClientRect();
-      mousePos.x = e.clientX - rect.left;
-      mousePos.y = e.clientY - rect.top;
+    const timeline = [];
+    for (let i = 0; i < TOTAL_DAYS; i++) {
+      const d = new Date(todayDate);
+      d.setDate(todayDate.getDate() + i);
+      timeline.push(d);
     }
 
-    function renderGenePoolGraph(monthData) {
-      let gCvs = document.getElementById('gene-pool-graph');
-      if (!gCvs) return;
-      let ctx = gCvs.getContext('2d');
-      ctx.clearRect(0, 0, gCvs.width, gCvs.height);
+    // Dynamic Sound Throttling & Audio Pooling
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let lastSoundTime = 0;
+    let activeVoices = 0;
+    const MAX_VOICES = 3; // Maximum simultaneous sound channels
 
-      let history = monthData.genePoolHistory || [];
-      if (history.length === 0) return;
-
-      ctx.strokeStyle = '#a3e635';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-
-      let maxLen = Math.max(history.length, 6);
-      let w = gCvs.width - 10;
-      let h = gCvs.height - 10;
-
-      history.forEach((val, idx) => {
-        let px = 5 + (idx * (w / maxLen));
-        let py = (gCvs.height - 5) - (val / 30) * h;
-        if (py < 5) py = 5;
-
-        if (idx === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-
-        ctx.fillStyle = '#a3e635';
-        ctx.fillRect(px - 1, py - 1, 2, 2);
-      });
-      ctx.stroke();
-    }
-
-    function renderHeaderMiniBiome() {
-      let miniCvs = document.getElementById('header-biome-mini');
-      if (!miniCvs || appState.settings.showBiome === false) return;
-      let mCtx = miniCvs.getContext('2d');
-      mCtx.clearRect(0, 0, miniCvs.width, miniCvs.height);
-
-      let m1 = appState.months[1];
-      if (!m1) return;
-
-      let scaleX = miniCvs.width / 660;
-      let scaleY = miniCvs.height / 260;
-
-      m1.stones.forEach(st => {
-        mCtx.fillStyle = '#525252';
-        mCtx.beginPath();
-        mCtx.arc(st.x * scaleX, st.y * scaleY, Math.max(1, st.baseRadius * scaleX), 0, Math.PI * 2);
-        mCtx.fill();
-      });
-
-      m1.plants.forEach(pl => {
-        pl.pixels.forEach(px => {
-          if (px.alive) {
-            mCtx.fillStyle = '#34d399';
-            mCtx.fillRect((pl.x + px.offsetX) * scaleX, (pl.y + px.offsetY) * scaleY, 1.5, 1.5);
-          }
-        });
-      });
-
-      m1.population.forEach(org => {
-        mCtx.fillStyle = org.habitsSnapshot[0]?.color || '#f87171';
-        mCtx.fillRect(org.x * scaleX - 1, org.y * scaleY - 1, 2, 2);
-      });
-    }
-
-    function runSimulationLoop(dt) {
-      let cvs = document.getElementById('simulation-canvas');
-      if (!cvs) return;
-      let ctx = cvs.getContext('2d');
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
-
-      let monthData = appState.months[appState.activeMonth];
-      if (!monthData) return;
-
-      if (!monthData.deadSpots) monthData.deadSpots = [];
-      if (!monthData.floatingFood) monthData.floatingFood = [];
-      if (!monthData.hearts) monthData.hearts = [];
-      if (!monthData.plantParticles) monthData.plantParticles = [];
-      if (monthData.islandsEatenCount === undefined) monthData.islandsEatenCount = 0;
-      if (!monthData.genePoolHistory) monthData.genePoolHistory = [];
+    function playWaterDropSound(pitchShift = 1, volume = 0.04) {
+      const now = performance.now();
+      // Prevents audio overlap/distortion (min 40ms interval & max 3 voices)
+      if (now - lastSoundTime < 40 || activeVoices >= MAX_VOICES) return;
       
-      if (!monthData.plants || monthData.plants.length === 0) {
-        monthData.plants = [];
-        for(let p = 0; p < 8; p++) {
-          spawnNonOverlappingEntity(monthData, cvs.width, cvs.height, 'plant');
-        }
-      }
-      if (!monthData.stones || monthData.stones.length === 0) {
-        monthData.stones = [];
-        for(let s = 0; s < 3; s++) {
-          spawnNonOverlappingEntity(monthData, cvs.width, cvs.height, 'stone');
-        }
-      }
+      lastSoundTime = now;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
 
-      if (isMouseDown) {
-        if (Math.random() < 0.6) {
-          let fx = Math.max(10, Math.min(cvs.width - 10, mousePos.x + (Math.random() - 0.5) * 16));
-          let fy = Math.max(10, Math.min(cvs.height - 10, mousePos.y + (Math.random() - 0.5) * 16));
-          monthData.floatingFood.push({
-            x: fx,
-            y: fy,
-            vx: (Math.random() - 0.5) * 1.5,
-            vy: (Math.random() - 0.5) * 1.5
-          });
-        }
-      }
+      activeVoices++;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
 
-      monthData.deadSpots.forEach(ds => {
-        ctx.fillStyle = '#262626';
-        ctx.beginPath();
-        ctx.arc(ds.x, ds.y, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#404040';
-        ctx.stroke();
-      });
+      osc.type = 'sine';
+      const baseFreq = (700 + Math.random() * 300) * pitchShift;
+      osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.4, audioCtx.currentTime + 0.035);
 
-      monthData.floatingFood.forEach((food) => {
-        food.x += food.vx;
-        food.y += food.vy;
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.035);
 
-        if (food.x < 5 || food.x > cvs.width - 5) food.vx *= -1;
-        if (food.y < 5 || food.y > cvs.height - 5) food.vy *= -1;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.035);
 
-        monthData.stones.forEach(stone => {
-          let distToStone = Math.hypot(food.x - stone.x, food.y - stone.y);
-          if (distToStone < stone.baseRadius + 2) {
-            let angle = Math.atan2(food.y - stone.y, food.x - stone.x);
-            food.x = stone.x + Math.cos(angle) * (stone.baseRadius + 3);
-            food.y = stone.y + Math.sin(angle) * (stone.baseRadius + 3);
-            food.vx *= -1;
-            food.vy *= -1;
-          }
-        });
-        
-        ctx.fillStyle = '#fbbf24';
-        ctx.fillRect(food.x - 2, food.y - 2, 4, 4);
-      });
+      osc.onended = () => {
+        activeVoices = Math.max(0, activeVoices - 1);
+      };
+    }
 
-      monthData.stones.forEach(stone => {
-        stone.pixels.forEach(px => {
-          ctx.fillStyle = '#525252';
-          ctx.fillRect(stone.x + px.offsetX - 1.5, stone.y + px.offsetY - 1.5, 3, 3);
-        });
-      });
+    // DOM References
+    const monthsContainer = document.getElementById('monthsContainer');
+    const clickersWrapper = document.getElementById('clickersWrapper');
+    const addClickerBtn = document.getElementById('addClickerBtn');
+    const resetBtn = document.getElementById('resetDay');
 
-      monthData.plants.forEach((island, iIdx) => {
-        if (island.isRegenerating) {
-          island.regenerationTimer += dt;
-          let totalPixels = island.pixels.length;
-          let activateCount = Math.floor((island.regenerationTimer / 5.0) * totalPixels);
-          for (let p = 0; p < island.pixels.length; p++) {
-            if (p < activateCount) {
-              island.pixels[p].alive = true;
-            }
-          }
-          if (island.regenerationTimer >= 5.0) {
-            island.isRegenerating = false;
-          }
-        }
+    const hoverCard = document.getElementById('statsHoverCard');
+    const popDate = document.getElementById('popDate');
+    const popTotal = document.getElementById('popTotal');
+    const popList = document.getElementById('popList');
+    const popNote = document.getElementById('popNote');
 
-        let aliveCount = 0;
-        island.pixels.forEach(px => {
-          if (px.alive) {
-            aliveCount++;
-            ctx.fillStyle = '#34d399';
-            ctx.fillRect(island.x + px.offsetX - 1.5, island.y + px.offsetY - 1.5, 3, 3);
-          }
-        });
+    const noteModal = document.getElementById('noteModal');
+    const modalDate = document.getElementById('modalDate');
+    const noteInput = document.getElementById('noteInput');
+    const closeModal = document.getElementById('closeModal');
+    const saveNote = document.getElementById('saveNote');
 
-        if (aliveCount === 0 && !island.isRegenerating) {
-          monthData.islandsEatenCount++;
-          spawnNonOverlappingEntity(monthData, cvs.width, cvs.height, 'plant');
-          monthData.plants.splice(iIdx, 1);
-        }
-      });
+    let activeKeyForNote = null;
 
-      monthData.plantParticles.forEach((pt, pIdx) => {
-        pt.x += pt.vx;
-        pt.y += pt.vy;
-        pt.alpha -= 0.04;
-        if (pt.alpha <= 0) {
-          monthData.plantParticles.splice(pIdx, 1);
-          return;
-        }
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, pt.alpha);
-        ctx.fillStyle = '#6ee7b7';
-        ctx.fillRect(pt.x, pt.y, 2, 2);
-        ctx.restore();
-      });
+    function getDayTotalClicks(key) {
+      if (!effortData[key]) return 0;
+      return Object.values(effortData[key]).reduce((a, b) => a + b, 0);
+    }
 
-      monthData.hearts.forEach((h, hIdx) => {
-        h.y -= 0.6;
-        h.alpha -= 0.02;
-        if (h.alpha <= 0) {
-          monthData.hearts.splice(hIdx, 1);
-          return;
-        }
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, h.alpha);
-        ctx.fillStyle = '#f87171';
-        let hx = h.x, hy = h.y;
-        ctx.fillRect(hx, hy, 2, 2);
-        ctx.fillRect(hx + 4, hy, 2, 2);
-        ctx.fillRect(hx - 2, hy + 2, 8, 2);
-        ctx.fillRect(hx, hy + 4, 4, 2);
-        ctx.fillRect(hx + 1, hy + 6, 2, 2);
-        ctx.restore();
-      });
+    function renderGrid() {
+      monthsContainer.innerHTML = '';
+      let currentMonthIdx = -1;
+      let monthBlock = null;
+      let monthGrid = null;
 
-      let totalWellbeingSum = 0;
+      timeline.forEach((date, idx) => {
+        const monthNum = date.getMonth();
+        const dayOfWeek = (date.getDay() + 6) % 7; 
+        const key = formatDateKey(date);
 
-      if (monthData.population && monthData.population.length > 0) {
-        for (let i = monthData.population.length - 1; i >= 0; i--) {
-          let org = monthData.population[i];
-
-          org.wellbeing -= (1 / 3600) * (1/30) * 100 * (dt * 60);
-          if (org.wellbeing < 0) org.wellbeing = 0;
-
-          if (org.wellbeing <= 0) {
-            monthData.deadSpots.push({ x: org.x, y: org.y });
-            monthData.population.splice(i, 1);
-            continue;
-          }
-
-          totalWellbeingSum += org.wellbeing;
-
-          let flagellaObj = org.habitsSnapshot.find(h => h.morph === 'flagella');
-          let fUnits = flagellaObj ? (flagellaObj.type === 'yn' ? (flagellaObj.units > 0 ? 6 : 1) : Math.min(flagellaObj.units, 8)) : 2;
+        if (monthNum !== currentMonthIdx) {
+          currentMonthIdx = monthNum;
           
-          let wellbeingSpeedFactor = org.wellbeing / 100;
-          let baseSpeed = (0.3 + (fUnits * 0.08)) * wellbeingSpeedFactor;
+          monthBlock = document.createElement('div');
+          monthBlock.classList.add('month-block');
 
-          let targetX = null;
-          let targetY = null;
-          let minDist = 9999;
+          const title = document.createElement('div');
+          title.classList.add('month-title');
+          title.textContent = date.toLocaleString('default', { month: 'short' });
 
-          monthData.floatingFood.forEach(food => {
-            let d = Math.hypot(org.x - food.x, org.y - food.y);
-            if (d < minDist) {
-              minDist = d;
-              targetX = food.x;
-              targetY = food.y;
-            }
+          monthGrid = document.createElement('div');
+          monthGrid.classList.add('month-grid');
+
+          monthBlock.appendChild(title);
+          monthBlock.appendChild(monthGrid);
+          monthsContainer.appendChild(monthBlock);
+
+          for (let p = 0; p < dayOfWeek; p++) {
+            const pad = document.createElement('div');
+            pad.style.visibility = 'hidden';
+            monthGrid.appendChild(pad);
+          }
+        }
+
+        const totalClicks = getDayTotalClicks(key);
+        const slot = document.createElement('div');
+        slot.classList.add('slot');
+
+        const isToday = idx === 0;
+        const isNewYear = date.getMonth() === 0 && date.getDate() === 1;
+
+        if (isToday) slot.classList.add('today');
+        if (isNewYear) slot.classList.add('new-year');
+        if (notesData[key] && notesData[key].trim() !== '') slot.classList.add('has-note');
+
+        if (totalClicks > 0 && effortData[key]) {
+          let dominantColor = clickers[0].color;
+          let maxVal = -1;
+          clickers.forEach(c => {
+            const v = effortData[key][c.id] || 0;
+            if (v > maxVal) { maxVal = v; dominantColor = c.color; }
+          });
+          slot.style.backgroundColor = dominantColor;
+          slot.style.borderColor = 'transparent';
+          slot.style.boxShadow = `0 0 8px ${dominantColor}a0`;
+        }
+
+        slot.addEventListener('mouseenter', () => {
+          popDate.textContent = key + (isNewYear ? ' 🎉 New Year!' : '');
+          popTotal.textContent = `Total Clicks: ${totalClicks}`;
+          
+          popList.innerHTML = '';
+          clickers.forEach(c => {
+            const count = (effortData[key] && effortData[key][c.id]) || 0;
+            const pct = totalClicks > 0 ? (count / totalClicks) * 100 : 0;
+            
+            const item = document.createElement('div');
+            item.innerHTML = `
+              <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                <span style="color:${c.color}; font-weight:700;">${c.name}</span>
+                <span><b>${count}</b></span>
+              </div>
+              <div class="pop-bar" style="width:${pct}%; background:${c.color};"></div>
+            `;
+            popList.appendChild(item);
           });
 
-          let currentSpeed = baseSpeed;
-          let desiredAngle = org.angle;
-
-          if (targetX !== null && targetY !== null) {
-            currentSpeed *= 2.2;
-            desiredAngle = Math.atan2(targetY - org.y, targetX - org.x);
+          if (notesData[key] && notesData[key].trim() !== '') {
+            popNote.style.display = 'block';
+            popNote.textContent = `"${notesData[key]}"`;
           } else {
-            desiredAngle += (Math.random() - 0.5) * 0.4;
+            popNote.style.display = 'none';
           }
 
-          let rayAngles = [0, -0.5, 0.5, -1.0, 1.0];
-          let chosenAngle = desiredAngle;
+          hoverCard.style.display = 'block';
+        });
 
-          for (let rAngle of rayAngles) {
-            let testAngle = desiredAngle + rAngle;
-            let rayDist = 28;
-            let testX = org.x + Math.cos(testAngle) * rayDist;
-            let testY = org.y + Math.sin(testAngle) * rayDist;
+        slot.addEventListener('mousemove', (e) => {
+          hoverCard.style.left = `${e.clientX + 14}px`;
+          hoverCard.style.top = `${e.clientY + 14}px`;
+        });
 
-            let hitStone = monthData.stones.some(st => Math.hypot(st.x - testX, st.y - testY) < st.baseRadius + 12);
-            if (!hitStone) {
-              chosenAngle = testAngle;
-              break;
-            }
-          }
+        slot.addEventListener('mouseleave', () => hoverCard.style.display = 'none');
 
-          org.angle = chosenAngle + (Math.random() - 0.5) * 0.05;
-          org.vx = Math.cos(org.angle) * currentSpeed;
-          org.vy = Math.sin(org.angle) * currentSpeed;
+        slot.addEventListener('click', () => {
+          activeKeyForNote = key;
+          modalDate.textContent = `Notes for ${key}`;
+          noteInput.value = notesData[key] || '';
+          noteModal.classList.add('active');
+        });
 
-          let nextX = org.x + org.vx;
-          let nextY = org.y + org.vy;
-
-          let collidesWithStone = monthData.stones.some(st => Math.hypot(st.x - nextX, st.y - nextY) < st.baseRadius + 6);
-          if (collidesWithStone) {
-            org.angle += Math.PI * 0.5;
-            org.vx = Math.cos(org.angle) * currentSpeed;
-            org.vy = Math.sin(org.angle) * currentSpeed;
-            nextX = org.x + org.vx;
-            nextY = org.y + org.vy;
-          }
-
-          org.x = nextX;
-          org.y = nextY;
-
-          let margin = 15;
-          if (org.x < margin) { org.x = margin; org.angle = Math.PI - org.angle; }
-          if (org.x > cvs.width - margin) { org.x = cvs.width - margin; org.angle = Math.PI - org.angle; }
-          if (org.y < margin) { org.y = margin; org.angle = -org.angle; }
-          if (org.y > cvs.height - margin) { org.y = cvs.height - margin; org.angle = -org.angle; }
-
-          monthData.floatingFood.forEach((food, fIdx) => {
-            if (Math.hypot(org.x - food.x, org.y - food.y) < 12) {
-              monthData.floatingFood.splice(fIdx, 1);
-              org.wellbeing = Math.min(100, org.wellbeing + 3); 
-              monthData.hearts.push({ x: org.x, y: org.y - 10, alpha: 1.0 });
-            }
-          });
-
-          monthData.plants.forEach(island => {
-            if (island.isRegenerating) return;
-            island.pixels.forEach(px => {
-              if (px.alive) {
-                let pxWorldX = island.x + px.offsetX;
-                let pxWorldY = island.y + px.offsetY;
-                if (Math.hypot(org.x - pxWorldX, org.y - pxWorldY) < 11) {
-                  if (Math.random() < 0.2) {
-                    px.alive = false;
-                    playChewClickSound();
-                    monthData.plantParticles.push({
-                      x: pxWorldX,
-                      y: pxWorldY,
-                      vx: (Math.random() - 0.5) * 2.2,
-                      vy: (Math.random() - 0.5) * 2.2 - 0.5,
-                      alpha: 1.0
-                    });
-                  }
-                }
-              }
-            });
-          });
-
-          renderOrganism(ctx, org.x, org.y, org.angle, org.habitsSnapshot, true);
-        }
-
-        let popCount = monthData.population.length;
-        document.getElementById('stat-pop').innerText = popCount;
-        document.getElementById('header-stat-pop').innerText = popCount;
-        document.getElementById('stat-islands-eaten').innerText = monthData.islandsEatenCount;
-        document.getElementById('header-stat-eaten').innerText = monthData.islandsEatenCount;
-        renderGenePoolGraph(monthData);
-
-        let avgWellbeing = popCount > 0 ? Math.round(totalWellbeingSum / popCount) : 0;
-        let wbLabel = document.getElementById('stat-wellbeing');
-        wbLabel.innerText = avgWellbeing + '%';
-        wbLabel.style.color = avgWellbeing > 50 ? '#a3e635' : (avgWellbeing > 20 ? '#fbbf24' : '#f87171');
-
-        let dominant = monthData.habits.reduce((max, h) => {
-          let valMax = max.type === 'yn' ? (max.units > 0 ? 8 : 0) : max.units;
-          let valH = h.type === 'yn' ? (h.units > 0 ? 8 : 0) : h.units;
-          return valH > valMax ? h : max;
-        }, monthData.habits[0]);
-        document.getElementById('stat-gene').innerText = dominant ? `${dominant.name} (${dominant.morph})` : 'None';
-      } else {
-        document.getElementById('stat-pop').innerText = '0';
-        document.getElementById('header-stat-pop').innerText = '0';
-        document.getElementById('header-stat-eaten').innerText = monthData.islandsEatenCount || 0;
-        document.getElementById('stat-wellbeing').innerText = '0%';
-        document.getElementById('stat-gene').innerText = 'None';
-        document.getElementById('stat-islands-eaten').innerText = monthData.islandsEatenCount || 0;
-        renderGenePoolGraph(monthData);
-      }
-      renderHeaderMiniBiome();
+        monthGrid.appendChild(slot);
+      });
     }
 
-    window.toggleAnalytics = function(show) {
-      let modal = document.getElementById('analytics-modal');
-      if (!modal) return;
-      modal.style.display = show ? 'flex' : 'none';
-      if (show) {
-        setTimeout(() => renderAnalyticsCharts(), 50);
-      }
-    }
+    function renderClickers() {
+      clickersWrapper.innerHTML = '';
 
-    function renderAnalyticsCharts() {
-      let monthData = appState.months[appState.activeMonth];
-      
-      let treeCvs = document.getElementById('phylogeny-canvas');
-      let tCtx = treeCvs.getContext('2d');
-      tCtx.clearRect(0, 0, treeCvs.width, treeCvs.height);
-      tCtx.fillStyle = '#fff';
-      tCtx.font = '11px Courier New';
+      clickers.forEach((c, index) => {
+        if (!c.color) c.color = PALETTE[index % PALETTE.length];
+        const card = document.createElement('div');
+        card.classList.add('clicker-card');
 
-      let startY = 30;
-      if (monthData.phylogenyTree) {
-        monthData.phylogenyTree.forEach((node, i) => {
-          let yPos = startY + (i * 26);
-          if (yPos > treeCvs.height - 20) return;
-          
-          tCtx.strokeStyle = node.color;
-          tCtx.beginPath();
-          tCtx.moveTo(10, yPos);
-          tCtx.lineTo(35, yPos);
-          tCtx.stroke();
-          
-          tCtx.fillStyle = node.color;
-          tCtx.fillRect(35, yPos - 4, 8, 8);
-          
-          tCtx.fillStyle = '#fff';
-          tCtx.fillText(`Gen #${node.gen}: ${node.name}`, 48, yPos + 4);
-        });
-      }
+        const todayVal = (effortData[todayKey] && effortData[todayKey][c.id]) || 0;
 
-      let heatContainer = document.getElementById('heatmap-container');
-      heatContainer.innerHTML = '';
-      let history = monthData.performanceHistory || [];
-      let reportBox = document.getElementById('progression-report-box');
-      reportBox.innerHTML = '';
-      let tooltip = document.getElementById('matrix-tooltip');
-
-      if (history.length === 0) {
-        heatContainer.innerHTML = '<div style="color:#888; font-size:12px; padding:10px;">No spawn history recorded yet.</div>';
-        return;
-      }
-
-      let table = document.createElement('table');
-      table.style.cssText = 'width:100%; border-collapse:collapse; font-size:11px;';
-      
-      let thead = document.createElement('tr');
-      thead.innerHTML = '<th style="border:1px solid #444; padding:6px; background:#111; color:#a3e635;">Trait / Day</th>' + history.map(h => `<th style="border:1px solid #444; padding:6px; background:#111; text-align:center;">${h.timestamp}</th>`).join('');
-      table.appendChild(thead);
-
-      let habitMap = {};
-      monthData.habits.forEach(h => { habitMap[h.name] = { color: h.color, type: h.type, values: [] }; });
-
-      history.forEach(entry => {
-        let activeNames = entry.habits.map(eh => eh.name);
-        entry.habits.forEach(eh => {
-          if (!habitMap[eh.name]) {
-            habitMap[eh.name] = { color: eh.color, type: eh.type, values: [] };
-          }
-          habitMap[eh.name].values.push(eh.units);
-        });
-        Object.keys(habitMap).forEach(k => {
-          if (!activeNames.includes(k)) {
-            habitMap[k].values.push(0);
-          }
-        });
-      });
-
-      Object.keys(habitMap).forEach(traitName => {
-        let info = habitMap[traitName];
-        let maxVal = Math.max(...info.values, 1);
-
-        let tr = document.createElement('tr');
-        let tdTitle = document.createElement('td');
-        tdTitle.style.cssText = `border:1px solid #444; padding:6px; font-weight:bold; color:${info.color};`;
-        tdTitle.innerText = traitName;
-        tr.appendChild(tdTitle);
-
-        info.values.forEach(val => {
-          let td = document.createElement('td');
-          td.style.cssText = 'border:1px solid #444; padding:4px; text-align:center; cursor:pointer;';
-          
-          let intensity = info.type === 'yn' ? (val > 0 ? 1 : 0.1) : Math.min(val / maxVal, 1);
-          let alphaHex = Math.floor(Math.max(intensity, 0.15) * 255).toString(16).padStart(2, '0');
-          td.style.backgroundColor = info.color + alphaHex;
-          td.innerText = info.type === 'yn' ? (val > 0 ? 'Y' : 'N') : `${val}h`;
-
-          td.onmouseenter = (e) => {
-            tooltip.style.display = 'block';
-            tooltip.style.left = (e.clientX + 10) + 'px';
-            tooltip.style.top = (e.clientY + 10) + 'px';
-            tooltip.innerHTML = `<b>Trait:</b> ${traitName}<br><b>Value:</b> ${val}${info.type === 'hours' ? ' hrs' : (val > 0 ? ' (Yes)' : ' (No)')}<br><b>Category Max:</b> ${maxVal}`;
-          };
-          td.onmouseleave = () => { tooltip.style.display = 'none'; };
-
-          tr.appendChild(td);
-        });
-        table.appendChild(tr);
-      });
-
-      heatContainer.appendChild(table);
-
-      let trendCvs = document.getElementById('trend-canvas');
-      let trCtx = trendCvs.getContext('2d');
-      trCtx.clearRect(0, 0, trendCvs.width, trendCvs.height);
-
-      let padding = 30;
-      let graphW = trendCvs.width - (padding * 2);
-      let graphH = trendCvs.height - (padding * 2);
-
-      trCtx.strokeStyle = '#444';
-      trCtx.lineWidth = 1;
-      trCtx.beginPath();
-      trCtx.moveTo(padding, padding);
-      trCtx.lineTo(padding, trendCvs.height - padding);
-      trCtx.lineTo(trendCvs.width - padding, trendCvs.height - padding);
-      trCtx.stroke();
-
-      let maxSteps = Math.max(history.length, 1);
-      let trendDataPoints = [];
-
-      Object.keys(habitMap).forEach(traitName => {
-        let info = habitMap[traitName];
-        let maxVal = Math.max(...info.values, 8);
-
-        trCtx.strokeStyle = info.color;
-        trCtx.lineWidth = 2;
-        trCtx.beginPath();
-
-        info.values.forEach((val, idx) => {
-          let px = padding + (idx / (maxSteps - 1 || 1)) * graphW;
-          let normVal = info.type === 'yn' ? (val > 0 ? 1 : 0) : (val / maxVal);
-          let py = (trendCvs.height - padding) - (normVal * graphH);
-
-          if (idx === 0) trCtx.moveTo(px, py);
-          else trCtx.lineTo(px, py);
-
-          trendDataPoints.push({
-            x: px,
-            y: py,
-            trait: traitName,
-            value: val,
-            type: info.type,
-            day: history[idx] ? history[idx].timestamp : `Day ${idx + 1}`,
-            color: info.color
-          });
-
-          trCtx.fillStyle = info.color;
-          trCtx.fillRect(px - 3, py - 3, 6, 6);
-        });
-        trCtx.stroke();
-      });
-
-      trendCvs.onmousemove = (e) => {
-        let rect = trendCvs.getBoundingClientRect();
-        let mouseX = e.clientX - rect.left;
-        let mouseY = e.clientY - rect.top;
-
-        let scaleX = trendCvs.width / rect.width;
-        let scaleY = trendCvs.height / rect.height;
-        let canvasMouseX = mouseX * scaleX;
-        let canvasMouseY = mouseY * scaleY;
-
-        let closest = null;
-        let minD = 20;
-
-        trendDataPoints.forEach(pt => {
-          let d = Math.hypot(pt.x - canvasMouseX, pt.y - canvasMouseY);
-          if (d < minD) {
-            minD = d;
-            closest = pt;
-          }
-        });
-
-        if (closest) {
-          tooltip.style.display = 'block';
-          tooltip.style.left = (e.clientX + 12) + 'px';
-          tooltip.style.top = (e.clientY + 12) + 'px';
-          tooltip.innerHTML = `
-            <span style="color:${closest.color}"><b>■ ${closest.trait}</b></span><br>
-            <b>Time:</b> ${closest.day}<br>
-            <b>Performance:</b> ${closest.value}${closest.type === 'hours' ? ' hrs' : (closest.value > 0 ? ' (Yes)' : ' (No)')}
-          `;
-        } else {
-          tooltip.style.display = 'none';
-        }
-      };
-
-      trendCvs.onmouseleave = () => {
-        tooltip.style.display = 'none';
-      };
-
-      Object.keys(habitMap).forEach(traitName => {
-        let info = habitMap[traitName];
-        let totalVal = info.values.reduce((a, b) => a + b, 0);
-        let avgVal = info.values.length > 0 ? (totalVal / info.values.length).toFixed(1) : 0;
-
-        let card = document.createElement('div');
-        card.className = 'compact-stat-card';
         card.innerHTML = `
-          <div style="font-weight:bold; color:${info.color}; font-size:12px; border-bottom:1px solid #333; padding-bottom:4px;">${traitName}</div>
-          <div class="metrics-list">
-            <span>Total Units: <b>${totalVal}</b></span>
-            <span>Daily Average: <b>${avgVal}${info.type === 'hours' ? 'h' : ''}</b></span>
+          <div class="clicker-btn" data-id="${c.id}" style="border-color: ${c.color}; box-shadow: 0 0 15px ${c.color}40;">
+            <div class="click-val">${todayVal}</div>
           </div>
-          <div style="font-size:10px; color:#888;">Mode: ${info.type.toUpperCase()}</div>
+          <div class="clicker-controls">
+            <span class="clicker-name" title="${c.name}">${c.name}</span>
+            <button class="rename-btn" data-id="${c.id}" style="padding:2px 5px; font-size:9px;">✎</button>
+            ${clickers.length > 1 ? `<button class="danger delete-btn" data-id="${c.id}" style="padding:2px 5px; font-size:9px;">✕</button>` : ''}
+          </div>
         `;
-        reportBox.appendChild(card);
+
+        const btn = card.querySelector('.clicker-btn');
+        btn.addEventListener('click', () => {
+          playWaterDropSound(1.2, 0.08);
+          
+          if (!effortData[todayKey]) effortData[todayKey] = {};
+          effortData[todayKey][c.id] = (effortData[todayKey][c.id] || 0) + 1;
+          
+          localStorage.setItem('vast_effort_multi_v4', JSON.stringify(effortData));
+
+          const rect = btn.getBoundingClientRect();
+          const spawnX = rect.left + rect.width / 2;
+          const spawnY = rect.top + rect.height / 2;
+          
+          // Spawn small glass beads and enforce hard particle cap
+          for (let i = 0; i < 2; i++) {
+            beads.push(new GlassBead(spawnX, spawnY, c.color));
+          }
+          while (beads.length > MAX_BEADS) beads.shift();
+
+          renderClickers();
+          renderGrid();
+        });
+
+        card.querySelector('.rename-btn').addEventListener('click', () => {
+          const newName = prompt('Rename clicker:', c.name);
+          if (newName && newName.trim() !== '') {
+            c.name = newName.trim();
+            localStorage.setItem('vast_clickers_v4', JSON.stringify(clickers));
+            renderClickers();
+            renderGrid();
+          }
+        });
+
+        const delBtn = card.querySelector('.delete-btn');
+        if (delBtn) {
+          delBtn.addEventListener('click', () => {
+            if (confirm(`Delete "${c.name}"?`)) {
+              clickers = clickers.filter(item => item.id !== c.id);
+              localStorage.setItem('vast_clickers_v4', JSON.stringify(clickers));
+              renderClickers();
+              renderGrid();
+            }
+          });
+        }
+
+        clickersWrapper.appendChild(card);
       });
     }
 
-    setInterval(() => {
-      runSimulationLoop(1/60);
-      drawPreview3D();
-    }, 1000 / 60);
+    addClickerBtn.addEventListener('click', () => {
+      const name = prompt('Enter clicker name:', `Clicker ${clickers.length + 1}`);
+      if (name && name.trim() !== '') {
+        const newId = 'c_' + Date.now();
+        const color = PALETTE[clickers.length % PALETTE.length];
+        clickers.push({ id: newId, name: name.trim(), color: color });
+        localStorage.setItem('vast_clickers_v4', JSON.stringify(clickers));
+        renderClickers();
+        renderGrid();
+      }
+    });
 
-    initFolders();
-    renderHabitManager();
+    saveNote.addEventListener('click', () => {
+      if (activeKeyForNote) {
+        notesData[activeKeyForNote] = noteInput.value;
+        localStorage.setItem('vast_notes_data', JSON.stringify(notesData));
+        noteModal.classList.remove('active');
+        renderGrid();
+      }
+    });
+    closeModal.addEventListener('click', () => noteModal.classList.remove('active'));
+
+    // Canvas & Physics
+    const canvas = document.getElementById('physicsCanvas');
+    const ctx = canvas.getContext('2d');
+    let beads = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class GlassBead {
+      constructor(x, y, color) {
+        this.x = x + (Math.random() - 0.5) * 12;
+        this.y = y + (Math.random() - 0.5) * 12;
+        this.radius = 4;
+        this.baseColor = color;
+        this.vx = (Math.random() - 0.5) * 5;
+        this.vy = Math.random() * -3 - 2;
+        this.mass = 1;
+        this.bounce = 0.65;
+      }
+
+      update() {
+        if (activeSpell === 'hole') {
+          const cx = window.innerWidth / 2;
+          const cy = window.innerHeight / 2;
+          const dx = cx - this.x;
+          const dy = cy - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          this.vx += (dx / dist) * 0.7;
+          this.vy += (dy / dist) * 0.7;
+          this.vx *= 0.94; this.vy *= 0.94;
+        } else if (activeSpell === 'tornado') {
+          const cx = window.innerWidth / 2;
+          const cy = window.innerHeight / 2;
+          const dx = this.x - cx;
+          const dy = this.y - cy;
+          this.vx += -dy * 0.02;
+          this.vy += dx * 0.02 - 0.18;
+        } else if (activeSpell === 'freeze') {
+          this.vx *= 0.85;
+          this.vy *= 0.85;
+          this.vy += 0.05;
+        } else if (activeSpell === 'fire') {
+          this.vy -= 0.35;
+          this.vx += (Math.random() - 0.5) * 0.4;
+        } else {
+          this.vy += 0.35;
+        }
+
+        if (mouse.x > 0) {
+          const mdx = mouse.x - this.x;
+          const mdy = mouse.y - this.y;
+          const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+          if (mdist < 160 && mdist > 5) {
+            const force = (160 - mdist) / 160;
+            this.vx += (mdx / mdist) * force * 0.4;
+            this.vy += (mdy / mdist) * force * 0.4;
+          }
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Screen Boundary Collisions
+        if (this.y + this.radius > canvas.height) {
+          this.y = canvas.height - this.radius;
+          this.vy *= -this.bounce;
+          this.vx *= 0.88;
+          if (Math.abs(this.vy) > 1.8) playWaterDropSound(0.7, 0.03);
+        } else if (this.y - this.radius < 0 && activeSpell === 'fire') {
+          this.y = this.radius;
+          this.vy *= -this.bounce;
+        }
+
+        if (this.x + this.radius > canvas.width) {
+          this.x = canvas.width - this.radius;
+          this.vx *= -this.bounce;
+        } else if (this.x - this.radius < 0) {
+          this.x = this.radius;
+          this.vx *= -this.bounce;
+        }
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        
+        let drawColor = this.baseColor;
+        if (activeSpell === 'hole') drawColor = '#00f5d4';
+        else if (activeSpell === 'freeze') drawColor = '#90e0ef';
+        else if (activeSpell === 'fire') drawColor = '#ff4d6d';
+
+        ctx.fillStyle = drawColor;
+        ctx.shadowColor = drawColor;
+        ctx.shadowBlur = 6;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.closePath();
+      }
+    }
+
+    // Optimized Particle Collision Resolution
+    function resolveBeadCollisions() {
+      const len = beads.length;
+      for (let i = 0; i < len; i++) {
+        for (let j = i + 1; j < len; j++) {
+          const b1 = beads[i];
+          const b2 = beads[j];
+
+          const dx = b2.x - b1.x;
+          const dy = b2.y - b1.y;
+          const distSq = dx * dx + dy * dy;
+          const minDist = b1.radius + b2.radius;
+
+          if (distSq < minDist * minDist) {
+            const dist = Math.sqrt(distSq) || 1;
+            const overlap = minDist - dist;
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            b1.x -= nx * overlap * 0.5;
+            b1.y -= ny * overlap * 0.5;
+            b2.x += nx * overlap * 0.5;
+            b2.y += ny * overlap * 0.5;
+
+            const kx = b1.vx - b2.vx;
+            const ky = b1.vy - b2.vy;
+            const p = 2 * (nx * kx + ny * ky) / (b1.mass + b2.mass);
+
+            b1.vx -= p * b2.mass * nx;
+            b1.vy -= p * b2.mass * ny;
+            b2.vx += p * b1.mass * nx;
+            b2.vy += p * b1.mass * ny;
+
+            if (Math.abs(p) > 1.2) playWaterDropSound(1.3, 0.02);
+          }
+        }
+      }
+    }
+
+    function animatePhysics() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      resolveBeadCollisions();
+
+      for (let i = beads.length - 1; i >= 0; i--) {
+        const b = beads[i];
+        b.update();
+        b.draw();
+      }
+      requestAnimationFrame(animatePhysics);
+    }
+    animatePhysics();
+
+    // Spell Mode Triggers
+    const spells = {
+      none: document.getElementById('spellNone'),
+      hole: document.getElementById('spellHole'),
+      tornado: document.getElementById('spellTornado'),
+      freeze: document.getElementById('spellFreeze'),
+      fire: document.getElementById('spellFire')
+    };
+
+    Object.keys(spells).forEach(key => {
+      spells[key].addEventListener('click', () => {
+        Object.values(spells).forEach(btn => btn.classList.remove('active'));
+        spells[key].classList.add('active');
+        activeSpell = key;
+      });
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if (effortData[todayKey]) {
+        effortData[todayKey] = {};
+        localStorage.setItem('vast_effort_multi_v4', JSON.stringify(effortData));
+        renderClickers();
+        renderGrid();
+      }
+    });
+
+    renderClickers();
+    renderGrid();
   </script>
 </body>
 </html>
