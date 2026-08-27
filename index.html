@@ -223,7 +223,7 @@
   </div>
 
   <div id="statsHoverCard">
-    <div class="pop-date" id="popDate">2026-08-26</div>
+    <div class="pop-date" id="popDate">2026-08-27</div>
     <div class="pop-event" id="popEvent" style="display:none;"></div>
     <div class="pop-total" id="popTotal">Total Clicks: 0</div>
     <div class="pop-list" id="popList"></div>
@@ -255,10 +255,10 @@
 
   <script>
     const TOTAL_DAYS = 365;
+    const PAST_DAYS_BUFFER = 14; // Fixed 14-day history window
     const MAX_BEADS = 120;
     const PALETTE = ['#e63946', '#3a86ff', '#2ec4b6', '#ff006e', '#ffb703', '#8338ec', '#06d6a0'];
     
-    // Expanded 10 Pastel Palette Options
     const PASTELS = [
       { name: 'Mint', color: '#b7e4c7' },
       { name: 'Rose', color: '#ffb5a7' },
@@ -283,6 +283,10 @@
     todayDate.setHours(0, 0, 0, 0);
     const todayKey = formatDateKey(todayDate);
 
+    // Anchor start date back by PAST_DAYS_BUFFER to preserve recent history
+    const startDate = new Date(todayDate);
+    startDate.setDate(startDate.getDate() - PAST_DAYS_BUFFER);
+
     let clickers = JSON.parse(localStorage.getItem('vast_clickers_v5')) || [
       { id: 'c1', name: 'Effort', color: PALETTE[0] },
       { id: 'c2', name: 'Focus', color: PALETTE[1] }
@@ -302,8 +306,8 @@
 
     const timeline = [];
     for (let i = 0; i < TOTAL_DAYS; i++) {
-      const d = new Date(todayDate);
-      d.setDate(todayDate.getDate() + i);
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
       timeline.push(d);
     }
 
@@ -395,7 +399,6 @@
 
       upcomingEvents.sort((a, b) => a.days - b.days);
 
-      // Render ALL custom events without truncating
       upcomingEvents.forEach(ev => {
         upcomingStatsHTML += `
           <div class="stat-item">
@@ -433,7 +436,7 @@
       let monthBlock = null;
       let monthGrid = null;
 
-      timeline.forEach((date, idx) => {
+      timeline.forEach((date) => {
         const monthNum = date.getMonth();
         const dayOfWeek = (date.getDay() + 6) % 7; 
         const key = formatDateKey(date);
@@ -466,7 +469,7 @@
         const slot = document.createElement('div');
         slot.classList.add('slot');
 
-        const isToday = idx === 0;
+        const isToday = key === todayKey;
         const isNewYear = date.getMonth() === 0 && date.getDate() === 1;
 
         if (isToday) slot.classList.add('today');
